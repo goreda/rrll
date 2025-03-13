@@ -18,12 +18,41 @@
 
         iframe {
             border: none;
-            width: 511px; /* Use the original size of your canvas */
-            height: 512px; /* Use the original size of your canvas */
+            width: 511px;  /* Match your .pde canvas width */
+            height: 512px; /* Match your .pde canvas height */
         }
     </style>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/processing/processing.js@latest/processing.min.js"></script>
 </head>
 <body>
-    <iframe src="https://github.com/goreda/rrll/blob/main/rrll.html" title="Processing Sketch"></iframe>
+    <canvas id="processing-canvas"></canvas>
+
+    <script type="application/processing">
+        // Your Processing code goes here or use an external file if needed
+        void setup() {
+            size(511, 512);
+            background(0);
+        }
+
+        void draw() {
+            fill(255);
+            ellipse(mouseX, mouseY, 50, 50);
+        }
+    </script>
+
+    <script>
+        // If you have an external PDE file on GitHub, use this approach:
+        var canvas = document.getElementById('processing-canvas');
+        var p = new Processing(canvas, function(processing) {
+            fetch("https://github.com/goreda/rrll/blob/main/rr2ll2ia3.pde")
+                .then(response => response.text())
+                .then(data => {
+                    processing.loadSketch(data); // Load the PDE content
+                })
+                .catch(error => {
+                    console.error("Error loading PDE file:", error);
+                });
+        });
+    </script>
 </body>
 </html>
