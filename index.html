@@ -12,19 +12,20 @@
 <body>
   <canvas id="mycanvas"></canvas>
   <script src="rr2ll2ia3.js"></script>
-  
-   <script>
+  <script>
     var canvas = document.getElementById('mycanvas');
     var processingInstance = new Processing(canvas, function(processing) {
       processing.size(560, 340); //Set size here too
       processing.noSmooth();
 
       //Initialize the processing function
-      draw = processing.draw;
-      setup = processing.setup;
-      mouseClicked = processing.mouseClicked;
+      var draw = processing.draw;
+      var setup = processing.setup;
+      var mouseClicked = processing.mouseClicked;
+       processing.setup = function() { setup(processing) };
+      processing.draw = function() { draw(processing) };
+       processing.mouseClicked = function() { mouseClicked(processing) };
     });
-  </script>
   </script>
 </body>
 </html>
