@@ -64,7 +64,7 @@ var PVector = processing.PVector;
 // --- Cell Representation ---
 var Cell = function(x, y, gene, mutationRate) {
     console.log("Created cell at:", x, y, gene, mutationRate); // Check creation
-    this.position = new PVector(x, y, processing);
+    this.position = new PVector(x, y);
     this.velocity = PVector.random2D();
     var randomVector = PVector.random2D();
         console.log("Random vector:", randomVector.x, randomVector.y);
@@ -122,15 +122,15 @@ Cell.prototype.interact = function(other) {
         }
 
         // Collision Response
-        PVector collisionNormal = PVector.sub(other.position, this.position).normalize();
-        float overlap = (this.radius + other.radius) - distance;
-        float separationAmount = overlap * 0.5f;
+        var collisionNormal = PVector.sub(other.position, this.position).normalize();
+        var overlap = float (this.radius + other.radius) - distance;
+        var separationAmount = overlap * 0.5f;
 
         this.position.sub(PVector.mult(collisionNormal, separationAmount));
         other.position.add(PVector.mult(collisionNormal, separationAmount));
 
-        PVector thisVelocity = this.velocity.copy();
-        PVector otherVelocity = other.velocity.copy();
+        var thisVelocity = this.velocity.copy();
+        var otherVelocity = other.velocity.copy();
         float thisDot = thisVelocity.dot(collisionNormal);
         float otherDot = otherVelocity.dot(collisionNormal);
         thisVelocity.sub(PVector.mult(collisionNormal, 2 * thisDot));
@@ -158,7 +158,7 @@ Cell.prototype.reproduce = function(other) {
         PVector newPosition = PVector.add(this.position, other.position).div(2);
         newPosition.add(PVector.random2D().mult(this.radius));
 
-        cells.push(new Cell(mouseX, mouseY, int(processing.random(GENE_MIN, GENE_MAX + 1)), newMutationRate));
+        cells.push(new Cell(processing.random(processing.width), processing.random(processing.height), int(processing.random(GENE_MIN, GENE_MAX + 1)), newMutationRate));
     }
 }
 
@@ -184,6 +184,7 @@ Cell.prototype.checkSurvival = function() {
     // Loneliness check
     var neighbors = 0;
     for (var i = 0; i < cells.length; i++) {
+  var other = cells[i];
         if (PVector.dist(this.position, other.position) < interactionRadius) {
             neighbors++;
         }
@@ -227,7 +228,7 @@ this.setup = function() {
     lastRefreshTime = millis();
 
        monoFont = processing.createFont("Arial", 12);
- processing.textFont(monoFont);
+  processing.textFont(monoFont);
 
     processing.cursor();
     targetBackgroundColor = BACKGROUND_COLOR;
@@ -248,7 +249,7 @@ function randomizeSimulation() {
 
     for (var i = 0; i < UNIVERSE_SIZE; i++) {
         var initialMutationRate = baseMutationRate + processing.random(-mutationRateRange, mutationRateRange);
-        cells.push(new Cell(mouseX, mouseY, int(processing.random(GENE_MIN, GENE_MAX + 1)), initialMutationRate));
+        cells.push(new Cell(processing.random(processing.width), processing.random(processing.height), int(processing.random(GENE_MIN, GENE_MAX + 1)), initialMutationRate));
     }
 
     for (var i = 0; i < processing.width * processing.height * foodDensity / 2; i++) {
@@ -381,15 +382,15 @@ function displayCellCounts() {
 
     processing.fill(0, 0, 255);
     textAlign(RIGHT, BOTTOM);
-    processing.text(String(blueCount), width - 12, processing.height - 10);
+    processing.text(String(blueCount), width - 12, height - 10);
 
     processing.fill(255, 0, 0);
     textAlign(LEFT, BOTTOM);
-    processing.text(String(redCount), 12, processing.height - 10);
+    processing.text(String(redCount), 12, height - 10);
 
     processing.fill(0, 255, 0);
     textAlign(CENTER, BOTTOM);
-    processing.text(String(greenCount), width / 2, processing.height - 10);
+    processing.text(String(greenCount), width / 2, height - 10);
 
     processing.fill(0, 0, 0);
     textAlign(LEFT, TOP);
@@ -515,7 +516,7 @@ function killCellsNearMouse() {
     var killRadius = 100;
     for (var i = cells.length - 1; i >= 0; i--) {
         var cell = cells[i];
-        if (dist(mouseX, mouseY, cell.position.x, cell.position.y) < killRadius) {
+        if (processing.dist(mouseX, mouseY, cell.position.x, cell.position.y) < killRadius) {
             cells.splice(i, 1);
         }
     }
