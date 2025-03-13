@@ -60,7 +60,7 @@ var targetRedColor, targetGreenColor, targetBlueColor;
 var Cell = function(x, y, gene, mutationRate) {
     this.position = new PVector(x, y);
     this.velocity = PVector.random2D();
-    this.maxSpeed = baseMaxSpeed + random(-maxSpeedVariation, maxSpeedVariation);
+    this.maxSpeed = baseMaxSpeed + processing.random(-maxSpeedVariation, maxSpeedVariation);
     this.maxSpeed = Math.max(0, this.maxSpeed);
     this.velocity.mult(this.maxSpeed);
     this.gene = gene;
@@ -138,11 +138,11 @@ Cell.prototype.reproduce = function(other) {
         other.energy -= energyCost;
 
         var newGene = (this.gene + other.gene) / 2;
-        if (random(100) < this.mutationRate) {
+        if (processing.random(100) < this.mutationRate) {
             newGene = this.mutateGene(newGene);
         }
 
-        var newMutationRate = constrain(this.mutationRate + random(-mutationRateRange, mutationRateRange), 0.5, 20);
+        var newMutationRate = constrain(this.mutationRate + processing.random(-mutationRateRange, mutationRateRange), 0.5, 20);
 
         var newPosition = PVector.add(this.position, other.position).div(2);
         newPosition.add(PVector.random2D().mult(this.radius));
@@ -152,15 +152,15 @@ Cell.prototype.reproduce = function(other) {
 }
 
 Cell.prototype.mutateGene = function() {
-    var mutationRoll = random(1);
+    var mutationRoll = processing.random(1);
     var mutationAmount;
 
     if (mutationRoll < 0.26) {
-        mutationAmount = (random(1) < 0.5) ? -1 : 1;
+        mutationAmount = (processing.random(1) < 0.5) ? -1 : 1;
     } else if (mutationRoll < 0.9) {
-        mutationAmount = (random(1) < 0.5) ? -2 : 2;
+        mutationAmount = (processing.random(1) < 0.5) ? -2 : 2;
     } else {
-        mutationAmount = (random(1) < 0.5) ? -3 : 3;
+        mutationAmount = (processing.random(1) < 0.5) ? -3 : 3;
     }
     var newGene = gene + mutationAmount;
     return constrain(newGene, GENE_MIN, GENE_MAX);
@@ -203,16 +203,16 @@ function setup() {
     frameRate(FRAME_RATE);
     smooth();
 
-    maxRadius = random(2, 200);
+    maxRadius = processing.random(2, 200);
     BACKGROUND_COLOR = (255 << 16) | (255 << 8) | 255;
     redColor = (255 << 16) | (0 << 8) | 0;
     greenColor = (0 << 16) | (255 << 8) | 0;
     blueColor = (0 << 16) | (0 << 8) | 255;
-    reproductionThreshold = random(0.7, 7);
+    reproductionThreshold = processing.random(0.7, 7);
     randomizeSimulation();
     setNewRefreshInterval();
     lastRefreshTime = millis();
-    monoFont = createFont("Arial", 12); // A basic default font for Processing.js
+    monoFont = createFont("Arial", 12);
 
     cursor();
     targetBackgroundColor = BACKGROUND_COLOR;
@@ -225,24 +225,24 @@ function randomizeSimulation() {
     cells = [];
     foodParticles = [];
 
-    UNIVERSE_SIZE = parseInt(random(2, random(2, 100)));
-    baseMutationRate = random(2, 8);
-    mutationRateRange = random(1, 4);
-    interactionRadius = random(10, 30);
-    CELL_RADIUS = random(minRadius, maxRadius);
+    UNIVERSE_SIZE = parseInt(processing.random(2, processing.random(2, 100)));
+    baseMutationRate = processing.random(2, 8);
+    mutationRateRange = processing.random(1, 4);
+    interactionRadius = processing.random(10, 30);
+    CELL_RADIUS = processing.random(minRadius, maxRadius);
 
     for (var i = 0; i < UNIVERSE_SIZE; i++) {
-        var initialMutationRate = baseMutationRate + random(-mutationRateRange, mutationRateRange);
-        cells.push(new Cell(random(width), random(height), parseInt(random(GENE_MIN, GENE_MAX + 1)), initialMutationRate));
+        var initialMutationRate = baseMutationRate + processing.random(-mutationRateRange, mutationRateRange);
+        cells.push(new Cell(processing.random(width), processing.random(height), parseInt(processing.random(GENE_MIN, GENE_MAX + 1)), initialMutationRate));
     }
 
     for (var i = 0; i < width * height * foodDensity / 2; i++) {
-        foodParticles.push(new PVector(random(width), random(height)));
+        foodParticles.push(new PVector(processing.random(width), processing.random(height)));
     }
 }
 
 function setNewRefreshInterval() {
-    refreshInterval = random(minRefreshInterval, maxRefreshInterval);
+    refreshInterval = processing.random(minRefreshInterval, maxRefreshInterval);
     println("Next refresh in " + refreshInterval + " seconds.");
 }
 
@@ -250,8 +250,8 @@ function draw() {
     BACKGROUND_COLOR = lerpColor(BACKGROUND_COLOR, targetBackgroundColor, colorTransitionSpeed);
     background(BACKGROUND_COLOR);
 
-    if (random(1) < foodDensity) {
-        foodParticles.push(new PVector(random(width), random(height)));
+    if (processing.random(1) < foodDensity) {
+        foodParticles.push(new PVector(processing.random(width), processing.random(height)));
     }
 
     stroke((200 << 16) | (100 << 8) | 0);
@@ -319,8 +319,8 @@ function renderCellEllipses() {
     }
 }
 
-function constrain(value, minVal, maxVal) {
-    return Math.min(Math.max(value, minVal), maxVal);
+function constrain(val, minVal, maxVal) {
+  return Math.max(minVal, Math.min(maxVal, val));
 }
 
 function lerpColor(c1, c2, amt) {
@@ -406,14 +406,14 @@ function shiftColors() {
 }
 
 function randomizeColors() {
-    targetRedColor = (parseInt(random(255)) << 16) | (parseInt(random(255)) << 8) | parseInt(random(255));
-    targetGreenColor = (parseInt(random(255)) << 16) | (parseInt(random(255)) << 8) | parseInt(random(255));
-    targetBlueColor = (parseInt(random(255)) << 16) | (parseInt(random(255)) << 8) | parseInt(random(255));
+    targetRedColor = (parseInt(processing.random(255)) << 16) | (parseInt(processing.random(255)) << 8) | parseInt(processing.random(255));
+    targetGreenColor = (parseInt(processing.random(255)) << 16) | (parseInt(processing.random(255)) << 8) | parseInt(processing.random(255));
+    targetBlueColor = (parseInt(processing.random(255)) << 16) | (parseInt(processing.random(255)) << 8) | parseInt(processing.random(255));
     println("Randomized cell colors.");
 }
 
 function mouseClicked() {
-    var action = parseInt(random(0, 9));
+    var action = parseInt(processing.random(0, 9));
     switch (action) {
         case 0:
             createNewCell();
@@ -446,8 +446,8 @@ function mouseClicked() {
 }
 
 function createNewCell() {
-    var initialMutationRate = baseMutationRate + random(-mutationRateRange, mutationRateRange);
-    cells.push(new Cell(mouseX, mouseY, parseInt(random(GENE_MIN, GENE_MAX + 1)), initialMutationRate));
+    var initialMutationRate = baseMutationRate + processing.random(-mutationRateRange, mutationRateRange);
+    cells.push(new Cell(mouseX, mouseY, parseInt(processing.random(GENE_MIN, GENE_MAX + 1)), initialMutationRate));
     println("New cell created at mouse position.");
 }
 
@@ -458,32 +458,32 @@ function changeRefreshInterval() {
 }
 
 function changeInteractionRadius() {
-    interactionRadius = random(10, 50);
+    interactionRadius = processing.random(10, 50);
     println("Interaction radius changed to: " + interactionRadius);
 }
 
 function randomizeSingleParameter() {
-    var parameterToChange = parseInt(random(0, 5));
+    var parameterToChange = parseInt(processing.random(0, 5));
 
     switch (parameterToChange) {
         case 0:
-            baseMutationRate = random(2, 8);
+            baseMutationRate = processing.random(2, 8);
             println("Base Mutation Rate changed to: " + baseMutationRate);
             break;
         case 1:
-            mutationRateRange = random(1, 4);
+            mutationRateRange = processing.random(1, 4);
             println("Mutation Rate Range changed to: " + mutationRateRange);
             break;
         case 2:
-            CELL_RADIUS = random(minRadius, maxRadius);
+            CELL_RADIUS = processing.random(minRadius, maxRadius);
             println("Cell Radius changed to: " + CELL_RADIUS);
             break;
         case 3:
-            baseMaxSpeed = random(1, 2);
+            baseMaxSpeed = processing.random(1, 2);
             println("Base Max Speed changed to: " + baseMaxSpeed);
             break;
         case 4:
-            foodDensity = random(0.01, 0.05);
+            foodDensity = processing.random(0.01, 0.05);
             println("Food Density changed to: " + foodDensity);
             break;
     }
