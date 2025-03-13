@@ -15,16 +15,13 @@
   <script>
     var canvas = document.getElementById('mycanvas');
     var processingInstance = new Processing(canvas, function(processing) {
-      processing.size(560, 340); //Set size here too
+      processing.size(560, 340);
       processing.noSmooth();
 
-      //Initialize the processing function
-      var draw = processing.draw;
-      var setup = processing.setup;
-      var mouseClicked = processing.mouseClicked;
-       processing.setup = function() { setup(processing) };
+      // Initialize the processing function, and pass in the processing variable
       processing.draw = function() { draw(processing) };
-       processing.mouseClicked = function() { mouseClicked(processing) };
+      processing.setup = function() { setup(processing) };
+      processing.mouseClicked = function() { mouseClicked(processing) };
     });
   </script>
 </body>
