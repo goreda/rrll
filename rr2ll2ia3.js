@@ -1,4 +1,3 @@
-// --- Constants and Parameters ---
 var UNIVERSE_SIZE = 120;
 var baseMutationRate = 5;
 var mutationRateRange = 2;
@@ -57,7 +56,7 @@ var targetBackgroundColor;
 var targetRedColor, targetGreenColor, targetBlueColor;
 
 // --- Cell Representation ---
-var Cell = function(x, y, gene, mutationRate, processing) {
+var Cell = function(x, y, gene, mutationRate) {
     console.log("Created cell at:", x, y, gene, mutationRate); // Check creation
     this.position = new PVector(x, y);
     this.velocity = PVector.random2D();
@@ -74,11 +73,11 @@ var Cell = function(x, y, gene, mutationRate, processing) {
     this.mutationRate = mutationRate;
 }
 
-Cell.prototype.update = function(processing) {
+Cell.prototype.update = function() {
     console.log("Cell update called");
     if (this.alive) {
            console.log("Cell is alive, position:", this.position.x, this.position.y); // Check position
-        var distanceToMouse = processing.dist(this.position.x, this.position.y, mouseX, mouseY);
+        var distanceToMouse = dist(this.position.x, this.position.y, mouseX, mouseY);
         var speedModifier = 1.0;
         if (distanceToMouse < slowDownRadius) {
             speedModifier = speedReductionFactor;
@@ -96,69 +95,69 @@ Cell.prototype.update = function(processing) {
     }
 }
 
-Cell.prototype.interact = function(other, processing) {
+Cell.prototype.interact = function(other) {
     if (this === other || !this.alive || !other.alive) return;
 
     var distance = PVector.dist(this.position, other.position);
 
     if (distance < interactionRadius) {
         var influence = map(distance, 0, interactionRadius, 1, 0);
-        var geneChange = parseInt(influence * (other.gene - this.gene) * 0.1);
+        var geneChange = int(influence * (other.gene - this.gene) * 0.1);
 
-        var energyTransfer = energyGainFromInteraction * influence * (1 - Math.abs(this.gene - other.gene) / (GENE_MAX - GENE_MIN));
+        var energyTransfer = energyGainFromInteraction * influence * (1 - abs(this.gene - other.gene) / float(GENE_MAX - GENE_MIN));
         this.energy += energyTransfer;
         other.energy -= energyTransfer;
 
         this.gene = constrain(this.gene + geneChange, GENE_MIN, GENE_MAX);
         other.gene = constrain(other.gene - geneChange, GENE_MIN, GENE_MAX);
 
-        if (distance < (this.radius + other.radius) && Math.abs(this.gene - other.gene) < reproductionThreshold && this.energy > minEnergyForReproduction && other.energy > minEnergyForReproduction) {
-            this.reproduce(other, processing);
+        if (distance < (this.radius + other.radius) && abs(this.gene - other.gene) < reproductionThreshold && this.energy > minEnergyForReproduction && other.energy > minEnergyForReproduction) {
+            this.reproduce(other);
         }
 
         // Collision Response
-        var collisionNormal = PVector.sub(other.position, this.position).normalize();
-        var overlap = (this.radius + other.radius) - distance;
-        var separationAmount = overlap * 0.5;
+        PVector collisionNormal = PVector.sub(other.position, this.position).normalize();
+        float overlap = (this.radius + other.radius) - distance;
+        float separationAmount = overlap * 0.5f;
 
         this.position.sub(PVector.mult(collisionNormal, separationAmount));
         other.position.add(PVector.mult(collisionNormal, separationAmount));
 
-        var thisVelocity = this.velocity.copy();
-        var otherVelocity = other.velocity.copy();
-        var thisDot = thisVelocity.dot(collisionNormal);
-        var otherDot = otherVelocity.dot(collisionNormal);
+        PVector thisVelocity = this.velocity.copy();
+        PVector otherVelocity = other.velocity.copy();
+        float thisDot = thisVelocity.dot(collisionNormal);
+        float otherDot = otherVelocity.dot(collisionNormal);
         thisVelocity.sub(PVector.mult(collisionNormal, 2 * thisDot));
         otherVelocity.sub(PVector.mult(collisionNormal, 2 * otherDot));
-        this.velocity.lerp(thisVelocity, 0.8);
-        other.velocity.lerp(otherVelocity, 0.8);
-        this.velocity.add(PVector.random2D().mult(0.3));
-        other.velocity.add(PVector.random2D().mult(0.3));
+        this.velocity.lerp(thisVelocity, 0.8f);
+        other.velocity.lerp(otherVelocity, 0.8f);
+        this.velocity.add(PVector.random2D().mult(0.3f));
+        other.velocity.add(PVector.random2D().mult(0.3f));
     }
 }
 
-Cell.prototype.reproduce = function(other, processing) {
+Cell.prototype.reproduce = function(other) {
     if (cells.length < UNIVERSE_SIZE * 4) {
-        var energyCost = (minEnergyForReproduction / 2) + 1;
+        float energyCost = (minEnergyForReproduction / 2) + 1;
         this.energy -= energyCost;
         other.energy -= energyCost;
 
         var newGene = (this.gene + other.gene) / 2;
         if (processing.random(100) < this.mutationRate) {
-            newGene = this.mutateGene(newGene, processing);
+            newGene = this.mutateGene(newGene);
         }
 
-        var newMutationRate = constrain(this.mutationRate + processing.random(-mutationRateRange, mutationRateRange), 0.5, 20);
+        var newMutationRate = constrain(this.mutationRate + processing.random(-mutationRateRange, mutationRateRange), 0.5f, 20);
 
-        var newPosition = PVector.add(this.position, other.position).div(2);
+        PVector newPosition = PVector.add(this.position, other.position).div(2);
         newPosition.add(PVector.random2D().mult(this.radius));
 
-        cells.push(new Cell(processing.random(width), processing.random(height), parseInt(processing.random(GENE_MIN, GENE_MAX + 1)), newMutationRate, processing));
+        cells.push(new Cell(processing.random(width), processing.random(height), int(processing.random(GENE_MIN, GENE_MAX + 1)), newMutationRate));
     }
 }
 
-Cell.prototype.mutateGene = function(gene, processing) {
-    var mutationRoll = processing.random(1);
+Cell.prototype.mutateGene = function(gene) {
+    float mutationRoll = processing.random(1);
     var mutationAmount;
 
     if (mutationRoll < 0.26) {
@@ -176,17 +175,19 @@ Cell.prototype.checkSurvival = function() {
     if (this.gene <= GENE_MIN || this.gene >= GENE_MAX) {
         this.alive = false;
     }
+    // Loneliness check
     var neighbors = 0;
     for (var i = 0; i < cells.length; i++) {
-        var other = cells[i];
-        if (other !== this && other.alive && PVector.dist(this.position, other.position) < interactionRadius) {
+        if (PVector.dist(this.position, other.position) < interactionRadius) {
             neighbors++;
         }
     }
-    var lifespanBonus = neighbors * 0.5;
-    if (this.energy < lifespanBonus) {
+    // Modify survival based on neighbors (example: more neighbors = longer lifespan)
+    float lifespanBonus = neighbors * 0.5f;  // Example bonus
+    if (energy < lifespanBonus) { // If energy is lower than bonus, it could die.
         this.alive = false;
     }
+
 }
 
 Cell.prototype.eatFood = function() {
@@ -206,8 +207,7 @@ var fixedGapSize = 36;
 
 function setup(processing) {
     processing.size(560, 340);
-    FRAME_RATE = 12;
-    processing.frameRate(FRAME_RATE);
+    processing.frameRate(12);
     processing.smooth();
 
     maxRadius = processing.random(2, 200);
@@ -216,12 +216,12 @@ function setup(processing) {
     greenColor = (0 << 16) | (255 << 8) | 0;
     blueColor = (0 << 16) | (0 << 8) | 255;
     reproductionThreshold = processing.random(0.7, 7);
-    randomizeSimulation(processing);
-    setNewRefreshInterval(processing);
+    randomizeSimulation();
+    setNewRefreshInterval();
     lastRefreshTime = millis();
+  
     monoFont = processing.createFont("Arial", 12);
-
-    processing.textFont(monoFont);
+  processing.textFont(monoFont);
 
     processing.cursor();
     targetBackgroundColor = BACKGROUND_COLOR;
@@ -230,8 +230,32 @@ function setup(processing) {
     targetBlueColor = blueColor;
 }
 
-function draw(processing) {
-    console.log("draw() called");
+function randomizeSimulation() {
+    cells = [];
+    foodParticles = [];
+
+    UNIVERSE_SIZE = int(processing.random(2, int(processing.random(2, 100))));
+    baseMutationRate = processing.random(2, 8);
+    mutationRateRange = processing.random(1, 4);
+    interactionRadius = processing.random(10, 30);
+    CELL_RADIUS = processing.random(minRadius, maxRadius);
+
+    for (var i = 0; i < UNIVERSE_SIZE; i++) {
+        var initialMutationRate = baseMutationRate + processing.random(-mutationRateRange, mutationRateRange);
+        cells.push(new Cell(processing.random(width), processing.random(height), int(processing.random(GENE_MIN, GENE_MAX + 1)), initialMutationRate));
+    }
+
+    for (var i = 0; i < width * height * foodDensity / 2; i++) {
+        foodParticles.push(new PVector(processing.random(width), processing.random(height)));
+    }
+}
+
+function setNewRefreshInterval() {
+    refreshInterval = processing.random(minRefreshInterval, maxRefreshInterval);
+    println("Next refresh in " + refreshInterval + " seconds.");
+}
+
+function draw() {
     BACKGROUND_COLOR = lerpColor(BACKGROUND_COLOR, targetBackgroundColor, colorTransitionSpeed);
     processing.background(BACKGROUND_COLOR);
 
@@ -252,11 +276,10 @@ function draw(processing) {
 
     for (var i = cells.length - 1; i >= 0; i--) {
         var cell = cells[i];
-        console.log("Updating cell at:", cell.position.x, cell.position.y);
-        cell.update(processing);
+        cell.update();
         cell.checkSurvival();
 
-        var distanceToCell = processing.dist(mouseX, mouseY, cell.position.x, cell.position.y);
+        var distanceToCell = dist(mouseX, mouseY, cell.position.x, cell.position.y);
         if (distanceToCell < cell.radius) {
             hoveringCell = true;
             processing.stroke(0);
@@ -267,7 +290,7 @@ function draw(processing) {
         }
 
         for (var j = i - 1; j >= 0; j--) {
-            cell.interact(cells[j], processing);
+            cell.interact(cells[j]);
         }
 
         if (!cell.alive) {
@@ -275,12 +298,12 @@ function draw(processing) {
         }
     }
 
-    renderCellEllipses(processing);
+    renderCellEllipses();
 
     if (millis() - lastRefreshTime > refreshInterval * 1000) {
         println("Random refresh!");
-        randomizeSimulation(processing);
-        setNewRefreshInterval(processing);
+        randomizeSimulation();
+        setNewRefreshInterval();
         lastRefreshTime = millis();
     }
 
@@ -288,14 +311,14 @@ function draw(processing) {
     greenColor = lerpColor(greenColor, targetGreenColor, colorTransitionSpeed);
     blueColor = lerpColor(blueColor, targetBlueColor, colorTransitionSpeed);
 
-    displayCellCount(processing);
-    displayCellCounts(processing);
-    displayMouseCoordinates(processing);
+    displayCellCount();
+    displayCellCounts();
+    displayMouseCoordinates();
 
     updateCursor();
 }
 
-function renderCellEllipses(processing) {
+function renderCellEllipses() {
     for (var i = 0; i < cells.length; i++) {
         var cell = cells[i];
         if (cell.alive) {
@@ -322,17 +345,17 @@ function lerpColor(c1, c2, amt) {
     var g = lerp(g1, g2, amt);
     var b = lerp(b1, b2, amt);
 
-    return (parseInt(r) << 16) | (parseInt(g) << 8) | parseInt(b);
+    return (int(r) << 16) | (int(g) << 8) | int(b);
 }
 
-function displayCellCount(processing) {
+function displayCellCount() {
     processing.fill(200);
     processing.textFont(monoFont);
     textAlign(LEFT, CENTER);
     processing.text(String(cells.length), 12, height / 2);
 }
 
-function displayCellCounts(processing) {
+function displayCellCounts() {
     processing.textFont(monoFont);
 
     var redCount = 0;
@@ -371,7 +394,7 @@ function displayCellCounts(processing) {
     processing.text("AUTOMATA", width - 10, 10);
 }
 
-function displayMouseCoordinates(processing) {
+function displayMouseCoordinates() {
     processing.textFont(monoFont);
     var coordinateTextColor = getInvertedColor(mouseX, mouseY);
     processing.fill(coordinateTextColor);
@@ -392,14 +415,14 @@ function shiftColors() {
 }
 
 function randomizeColors() {
-    targetRedColor = (parseInt(processing.random(255)) << 16) | (parseInt(processing.random(255)) << 8) | parseInt(processing.random(255));
-    targetGreenColor = (parseInt(processing.random(255)) << 16) | (parseInt(processing.random(255)) << 8) | parseInt(processing.random(255));
-    targetBlueColor = (parseInt(processing.random(255)) << 16) | (parseInt(processing.random(255)) << 8) | parseInt(processing.random(255));
+    targetRedColor = (int(processing.random(255)) << 16) | (int(processing.random(255)) << 8) | int(processing.random(255));
+    targetGreenColor = (int(processing.random(255)) << 16) | (int(processing.random(255)) << 8) | int(processing.random(255));
+    targetBlueColor = (int(processing.random(255)) << 16) | (int(processing.random(255)) << 8) | int(processing.random(255));
     println("Randomized cell colors.");
 }
 
-function mouseClicked(processing) {
-    var action = parseInt(processing.random(0, 9));
+function mouseClicked() {
+    var action = int(processing.random(0, 9));
     switch (action) {
         case 0:
             createNewCell();
@@ -433,7 +456,7 @@ function mouseClicked(processing) {
 
 function createNewCell() {
     var initialMutationRate = baseMutationRate + processing.random(-mutationRateRange, mutationRateRange);
-    cells.push(new Cell(mouseX, mouseY, parseInt(processing.random(GENE_MIN, GENE_MAX + 1)), initialMutationRate));
+    cells.push(new Cell(mouseX, mouseY, int(processing.random(GENE_MIN, GENE_MAX + 1)), initialMutationRate));
     println("New cell created at mouse position.");
 }
 
@@ -449,7 +472,7 @@ function changeInteractionRadius() {
 }
 
 function randomizeSingleParameter() {
-    var parameterToChange = parseInt(processing.random(0, 5));
+    var parameterToChange = int(processing.random(0, 5));
 
     switch (action) {
         case 0:
