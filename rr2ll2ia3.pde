@@ -1,544 +1,460 @@
-// --- Constants and Parameters ---
-var UNIVERSE_SIZE = 120;
-var baseMutationRate = 5;
-var mutationRateRange = 2;
-var reproductionThreshold; // Initialized in setup
-var interactionRadius = 20;
-var GENE_MIN = -18;
-var GENE_MAX = 18;
-var CELL_RADIUS = 10;
-var minRadius = 2;
-var maxRadius;
-var BACKGROUND_COLOR;
-var FRAME_RATE = 12;
-var baseMaxSpeed = 0.2;
-var maxSpeedVariation = 5;
-var energyConsumptionRate = 0.58;
-var energyGainFromInteraction = 0.004;
-var minEnergyForReproduction = 8;
+boolean hasDrawnOnce = false; 
 
-// --- Metaball Parameters ---
-var THRESHOLD = 0.2;
-var metaballStrength = 0.02;
+static final int GENE_MINIMUM = -18;
+static final int GENE_MAXIMUM = 18;
 
-// --- Environmental Factors ---
-var foodDensity = 0.025;
-var foodEnergyValue = 5.0;
-var foodParticles = [];
+int N = 512;  
+int UNIVERSE = N - 1;
+int GENERATIONS = 32;
+int DRAW_CELL_WIDTH = 2; 
+int DRAW_CELL_HEIGHT = 9; 
+int[][] cells;
 
-// --- Refresh Parameters ---
-var minRefreshInterval = 6;
-var maxRefreshInterval = 12;
-var refreshInterval;
-var lastRefreshTime;
+boolean drawGrid = true; 
 
-// --- Speed Modification Zone ---
-var slowDownRadius = 20;
-var speedReductionFactor = 50.3;
-
-// --- Color Palette Change Parameters ---
-var availableBackgroundColors = [
-  (255 << 16) | (255 << 8) | 255,
-  (0 << 16) | (0 << 8) | 0,
-  (255 << 16) | (0 << 8) | 0,
-  (0 << 16) | (255 << 8) | 0,
-  (0 << 16) | (0 << 8) | 255
-];
-var backgroundColorIndex = 0;
-
-var redColor;
-var greenColor;
-var blueColor;
-
-// --- Color Transition Parameters ---
-var colorTransitionSpeed = 0.6;
-
-var targetBackgroundColor;
-var targetRedColor, targetGreenColor, targetBlueColor;
-
-// --- Cell Representation ---
-var Cell = function(x, y, gene, mutationRate) {
-    this.position = new PVector(x, y);
-    this.velocity = PVector.random2D();
-    this.maxSpeed = baseMaxSpeed + random(-maxSpeedVariation, maxSpeedVariation);
-    this.maxSpeed = Math.max(0, this.maxSpeed);
-    this.velocity.mult(this.maxSpeed);
-    this.gene = gene;
-    this.alive = true;
-    this.radius = CELL_RADIUS;
-    this.energy = 12;
-    this.mutationRate = mutationRate;
-}
-
-Cell.prototype.update = function() {
-    if (this.alive) {
-        var distanceToMouse = dist(this.position.x, this.position.y, mouseX, mouseY);
-        var speedModifier = 1.0;
-        if (distanceToMouse < slowDownRadius) {
-            speedModifier = speedReductionFactor;
-        }
-
-        this.velocity.add(PVector.random2D().mult(0.2 * speedModifier));
-        this.velocity.limit(this.maxSpeed * speedModifier);
-        this.position.add(this.velocity);
-
-        this.energy -= energyConsumptionRate;
-        if (this.energy <= 0) {
-            this.alive = false;
-        }
-        this.eatFood();
-    }
-}
-
-Cell.prototype.interact = function(other) {
-    if (this === other || !this.alive || !other.alive) return;
-
-    var distance = PVector.dist(this.position, other.position);
-
-    if (distance < interactionRadius) {
-        var influence = map(distance, 0, interactionRadius, 1, 0);
-        var geneChange = parseInt(influence * (other.gene - this.gene) * 0.1);
-
-        var energyTransfer = energyGainFromInteraction * influence * (1 - Math.abs(this.gene - other.gene) / (GENE_MAX - GENE_MIN));
-        this.energy += energyTransfer;
-        other.energy -= energyTransfer;
-
-        this.gene = constrain(this.gene + geneChange, GENE_MIN, GENE_MAX);
-        other.gene = constrain(other.gene - geneChange, GENE_MIN, GENE_MAX);
-
-        if (distance < (this.radius + other.radius) && Math.abs(this.gene - other.gene) < reproductionThreshold && this.energy > minEnergyForReproduction && other.energy > minEnergyForReproduction) {
-            this.reproduce(other);
-        }
-
-        // Collision Response
-        var collisionNormal = PVector.sub(other.position, this.position).normalize();
-        var overlap = (this.radius + other.radius) - distance;
-        var separationAmount = overlap * 0.5;
-
-        this.position.sub(PVector.mult(collisionNormal, separationAmount));
-        other.position.add(PVector.mult(collisionNormal, separationAmount));
-
-        var thisVelocity = this.velocity.copy();
-        var otherVelocity = other.velocity.copy();
-        var thisDot = thisVelocity.dot(collisionNormal);
-        var otherDot = otherVelocity.dot(collisionNormal);
-        thisVelocity.sub(PVector.mult(collisionNormal, 2 * thisDot));
-        otherVelocity.sub(PVector.mult(collisionNormal, 2 * otherDot));
-        this.velocity.lerp(thisVelocity, 0.8);
-        other.velocity.lerp(otherVelocity, 0.8);
-        this.velocity.add(PVector.random2D().mult(0.3));
-        other.velocity.add(PVector.random2D().mult(0.3));
-    }
-}
-
-Cell.prototype.reproduce = function(other) {
-    if (cells.length < UNIVERSE_SIZE * 4) {
-        var energyCost = (minEnergyForReproduction / 2) + 1;
-        this.energy -= energyCost;
-        other.energy -= energyCost;
-
-        var newGene = (this.gene + other.gene) / 2;
-        if (random(100) < this.mutationRate) {
-            newGene = this.mutateGene(newGene);
-        }
-
-        var newMutationRate = constrain(this.mutationRate + random(-mutationRateRange, mutationRateRange), 0.5, 20);
-
-        var newPosition = PVector.add(this.position, other.position).div(2);
-        newPosition.add(PVector.random2D().mult(this.radius));
-
-        cells.push(new Cell(newPosition.x, newPosition.y, newGene, newMutationRate));
-    }
-}
-
-Cell.prototype.mutateGene = function() {
-    var mutationRoll = random(1);
-    var mutationAmount;
-
-    if (mutationRoll < 0.26) {
-        mutationAmount = (random(1) < 0.5) ? -1 : 1;
-    } else if (mutationRoll < 0.9) {
-        mutationAmount = (random(1) < 0.5) ? -2 : 2;
-    } else {
-        mutationAmount = (random(1) < 0.5) ? -3 : 3;
-    }
-    var newGene = gene + mutationAmount;
-    return constrain(newGene, GENE_MIN, GENE_MAX);
-}
-
-Cell.prototype.checkSurvival = function() {
-    if (this.gene <= GENE_MIN || this.gene >= GENE_MAX) {
-        this.alive = false;
-    }
-    var neighbors = 0;
-    for (var i = 0; i < cells.length; i++) {
-        var other = cells[i];
-        if (other !== this && other.alive && PVector.dist(this.position, other.position) < interactionRadius) {
-            neighbors++;
-        }
-    }
-    var lifespanBonus = neighbors * 0.5;
-    if (this.energy < lifespanBonus) {
-        this.alive = false;
-    }
-}
-
-Cell.prototype.eatFood = function() {
-    for (var i = foodParticles.length - 1; i >= 0; i--) {
-        var food = foodParticles[i];
-        if (PVector.dist(this.position, food) < this.radius) {
-            this.energy += foodEnergyValue;
-            foodParticles.splice(i, 1);
-        }
-    }
-}
-
-var cells = [];
-var monoFont;
-var hoveringCell = false;
-var fixedGapSize = 36;
-
-function setup() {
-    size(560, 340);
-    frameRate(FRAME_RATE);
-    smooth();
-
-    maxRadius = random(2, 200);
-    BACKGROUND_COLOR = (255 << 16) | (255 << 8) | 255;
-    redColor = (255 << 16) | (0 << 8) | 0;
-    greenColor = (0 << 16) | (255 << 8) | 0;
-    blueColor = (0 << 16) | (0 << 8) | 255;
-    reproductionThreshold = random(0.7, 7);
-    randomizeSimulation();
-    setNewRefreshInterval();
-    lastRefreshTime = millis();
-   monoFont = createFont("Arial", 12); // A basic default font for Processing.js
-
-    cursor();
-    targetBackgroundColor = BACKGROUND_COLOR;
-    targetRedColor = redColor;
-    targetGreenColor = greenColor;
-    targetBlueColor = blueColor;
-}
-
-function randomizeSimulation() {
-    cells = [];
-    foodParticles = [];
-
-    UNIVERSE_SIZE = parseInt(random(2, random(2, 100)));
-    baseMutationRate = random(2, 8);
-    mutationRateRange = random(1, 4);
-    interactionRadius = random(10, 30);
-    CELL_RADIUS = random(minRadius, maxRadius);
-
-    for (var i = 0; i < UNIVERSE_SIZE; i++) {
-        var initialMutationRate = baseMutationRate + random(-mutationRateRange, mutationRateRange);
-        cells.push(new Cell(random(width), random(height), parseInt(random(GENE_MIN, GENE_MAX + 1)), initialMutationRate));
-    }
-
-    for (var i = 0; i < width * height * foodDensity / 2; i++) {
-        foodParticles.push(new PVector(random(width), random(height)));
-    }
-}
-
-function setNewRefreshInterval() {
-    refreshInterval = random(minRefreshInterval, maxRefreshInterval);
-    println("Next refresh in " + refreshInterval + " seconds.");
-}
-
-function draw() {
-    BACKGROUND_COLOR = lerpColor(BACKGROUND_COLOR, targetBackgroundColor, colorTransitionSpeed);
-    background(BACKGROUND_COLOR);
-
-    if (random(1) < foodDensity) {
-        foodParticles.push(new PVector(random(width), random(height)));
-    }
-
-    stroke((200 << 16) | (100 << 8) | 0);
-    strokeWeight(1);
-    for (var i = 0; i < foodParticles.length; i++) {
-        var food = foodParticles[i];
-        point(food.x, food.y);
-    }
-    strokeWeight(12);
+void setup() { 
+    DRAW_CELL_WIDTH = 1;
+    DRAW_CELL_HEIGHT = 1; 
+    N = 512;  //512
+    UNIVERSE = N - 1;
+    GENERATIONS = GENERATIONS *16;
+    //size(UNIVERSE*DRAW_CELL_WIDTH, GENERATIONS*DRAW_CELL_HEIGHT); 
+    size(511,512);
+    cells = new int[UNIVERSE][GENERATIONS];
     noStroke();
+    frameRate(20); 
+} 
 
-    hoveringCell = false;
+void draw(){
+  if(!hasDrawnOnce) {
+    hasDrawnOnce = !hasDrawnOnce;
+    drawOnce();
+  }
+}
 
-    for (var i = cells.length - 1; i >= 0; i--) {
-        var cell = cells[i];
-        cell.update();
-        cell.checkSurvival();
+void mouseReleased() {
+      drawOnce();
+}
 
-        var distanceToCell = dist(mouseX, mouseY, cell.position.x, cell.position.y);
-        if (distanceToCell < cell.radius) {
-            hoveringCell = true;
-            stroke(0);
-            strokeWeight(2);
-            noFill();
-            ellipse(cell.position.x, cell.position.y, cell.radius * 2, cell.radius * 2);
-            noStroke();
-        }
+void drawOnce(){
+  initCells();  
+//  printCells();
+  evolve(); 
+  drawCells();
+}
 
-        for (var j = i - 1; j >= 0; j--) {
-            cell.interact(cells[j]);
-        }
-
-        if (!cell.alive) {
-            cells.splice(i, 1);
-        }
+void evolve() {
+  for (int i = 0; i < GENERATIONS-1; i++) {
+    for (int j = 0; j < UNIVERSE; j++) {
+      int X = cells[j][i];
+      shift(X, j, i, X, 0);
     }
-   // renderMetaballs(); // Call function to render metaballs
-    renderCellEllipses();  //Temporary
-    if (millis() - lastRefreshTime > refreshInterval * 1000) {
-        println("Random refresh!");
-        randomizeSimulation();
-        setNewRefreshInterval();
-        lastRefreshTime = millis();
+  }
+}
+
+
+
+static final int MAX_REPRODUCTIONS = 2;
+
+void shift(int X, int Xa, int Xg, int delta_a, int number_of_reproductions) {
+//  int X = cells[Xa][Xg];
+//  println("int "+gene+" = cells["+a+"]["+g+"];");
+  if(X == 0) return;
+  
+  int Na = wrapToUniverse(Xa + delta_a);
+  int Ng = Xg + 1; //next generation
+  int N = getCellValue(Na, Ng);
+  
+  //shift -- collision
+  if((N != 0) && (X != N)) {
+//    zeroNorm(Na, Ng);
+//    shiftNorm(X, Na, Ng);
+
+    int multipier = 2;
+
+    //see page 155 of 1957 paper
+    if(Na<=63*multipier) {
+      bNorm(Na, Ng);      
+    } else 
+    if(Na<=255*multipier) {
+      bNorm(Na, Ng);      
+    } else 
+    if(Na<=447*multipier) {
+      aNorm(Na, Ng);      
+    } else 
+    {
+      aNorm(Na, Ng);
     }
-
-    redColor = lerpColor(redColor, targetRedColor, colorTransitionSpeed);
-    greenColor = lerpColor(greenColor, targetGreenColor, colorTransitionSpeed);
-    blueColor = lerpColor(blueColor, targetBlueColor, colorTransitionSpeed);
-
-    displayCellCount();
-    displayCellCounts();
-    displayMouseCoordinates();
-    //drawAxisLines();  //Remove, slow
-
-    updateCursor();
+    
+  //shift -- no collision  
+  } else {
+    shiftNorm(X, Na, Ng);
+  }
+  
+  //reproduce
+  number_of_reproductions++;
+//  int Ya = wrapToUniverse(Xa + delta_a);
+  
+//  println("int "+Y+" = cells["+Ya+"]["+Xg+"];");
+  int Y = getCellValue(Xa + delta_a, Xg);
+  if((Y != 0) && (number_of_reproductions <= MAX_REPRODUCTIONS)) {
+    shift(X, Xa, Xg, Y, number_of_reproductions);
+  }
 }
 
-function renderCellEllipses() {
-    for (var i = 0; i < cells.length; i++) {
-        var cell = cells[i];
-        if (cell.alive) {
-            fill(cell.gene > 2 ? redColor : (cell.gene < -2 ? greenColor : blueColor));
-            ellipse(cell.position.x, cell.position.y, cell.radius * 2, cell.radius * 2);
-        }
+void drawCells() {
+  background(255);
+  for (int i = 0; i < GENERATIONS; i++) {
+    for (int j = 0; j < UNIVERSE; j++) {
+      drawCell(cells[j][i], DRAW_CELL_WIDTH*j, DRAW_CELL_HEIGHT*i);
     }
+  }
 }
 
-function constrain(value, minVal, maxVal) {
-    return Math.min(Math.max(value, minVal), maxVal);
-}
+//void draw() {
+//
+//}
 
-function lerpColor(c1, c2, amt) {
-    var r1 = (c1 >> 16) & 0xFF;
-    var g1 = (c1 >> 8) & 0xFF;
-    var b1 = c1 & 0xFF;
 
-    var r2 = (c2 >> 16) & 0xFF;
-    var g2 = (c2 >> 8) & 0xFF;
-    var b2 = c2 & 0xFF;
-
-    var r = lerp(r1, r2, amt);
-    var g = lerp(g1, g2, amt);
-    var b = lerp(b1, b2, amt);
-
-    return (parseInt(r) << 16) | (parseInt(g) << 8) | parseInt(b);
-}
-
-function displayCellCount() {
-    fill(200);
-    textFont(monoFont);
-    textAlign(LEFT, CENTER);
-    text(String(cells.length), 12, height / 2);
-}
-
-function displayCellCounts() {
-    textFont(monoFont);
-
-    var redCount = 0;
-    var greenCount = 0;
-    var blueCount = 0;
-
-    for (var i = 0; i < cells.length; i++) {
-        var cell = cells[i];
-        if (cell.gene > 2) {
-            redCount++;
-        } else if (cell.gene < -2) {
-            greenCount++;
-        } else {
-            blueCount++;
-        }
+void printCells() {
+  //... Print array in rectangular form
+  for (int i =0; i < GENERATIONS; i++) {
+    for (int j = 0; j < UNIVERSE; j++) {
+      String cellContents = "" + cells[j][i];
+        System.out.print(padToWidth(cellContents, 4));
     }
-
-    fill(0, 0, 255);
-    textAlign(RIGHT, BOTTOM);
-    text(String(blueCount), width - 12, height - 10);
-
-    fill(255, 0, 0);
-    textAlign(LEFT, BOTTOM);
-    text(String(redCount), 12, height - 10);
-
-    fill(0, 255, 0);
-    textAlign(CENTER, BOTTOM);
-    text(String(greenCount), width / 2, height - 10);
-
-    fill(0, 0, 0);
-    textAlign(LEFT, TOP);
-    text("CELLULAR", 10, 10);
-
-    fill(0, 0, 0);
-    textAlign(RIGHT, TOP);
-    text("AUTOMATA", width - 10, 10);
+    System.out.println("");
+  }
 }
 
-function displayMouseCoordinates() {
-    textFont(monoFont);
-    var coordinateTextColor = getInvertedColor(mouseX, mouseY);
-    fill(coordinateTextColor);
-    textAlign(CENTER, TOP);
-    text(String(mouseY), width / 2, 10);
-    fill(coordinateTextColor);
-    textAlign(RIGHT, CENTER);
-    text(String(mouseX), width - 12, height / 2);
+String padToWidth(String s, int width) {
+  while(s.length() < width) 
+    s = " " + s;
+  return s; 
 }
 
-function shiftColors() {
-    var tempRed = targetRedColor;
-    targetRedColor = targetGreenColor;
-    targetGreenColor = targetBlueColor;
-    targetBlueColor = tempRed;
-
-    println("Cell colors shifting.");
+void initGenerationWithRandom(int generation) {
+    for (int j = 0; j < UNIVERSE; j++) 
+      cells[j][generation] = randGene();
 }
 
-function randomizeColors() {
-    targetRedColor = (parseInt(random(255)) << 16) | (parseInt(random(255)) << 8) | parseInt(random(255));
-    targetGreenColor = (parseInt(random(255)) << 16) | (parseInt(random(255)) << 8) | parseInt(random(255));
-    targetBlueColor = (parseInt(random(255)) << 16) | (parseInt(random(255)) << 8) | parseInt(random(255));
-    println("Randomized cell colors.");
+int randGene() {
+  return int(random(GENE_MINIMUM, GENE_MAXIMUM+1));
+//  return int(random(-10,10));
 }
 
-function mouseClicked() {
-    var action = parseInt(random(0, 9));
-    switch (action) {
-        case 0:
-            createNewCell();
-            break;
-        case 1:
-            changeRefreshInterval();
-            break;
-        case 2:
-            changeInteractionRadius();
-            break;
-        case 3:
-            randomizeSingleParameter();
-            break;
-        case 4:
-            killCellsNearMouse();
-            break;
-        case 9:
-            cycleBackgroundColor();
-            break;
-        case 6:
-            shiftColors();
-            break;
-        case 7:
-            randomizeSimulation();
-            break;
-        case 8:
-            randomizeColors();
-            break;
+void initCells() {
+  //... Print array in rectangular form
+  for (int i =0; i < GENERATIONS; i++) {
+    for (int j = 0; j < UNIVERSE; j++) 
+      cells[j][i] = 0;
+  }
+
+  initGenerationWithRandom(0);
+  
+//  cells[20][0] = 5;
+//  cells[21][0] = -3;
+//  cells[22][0] = 1;
+//  cells[23][0] = -3;
+////  cells[24][0] = ;
+//  cells[25][0] = -3;
+//  cells[26][0] = 1;
+////  cells[27][0] = ;
+////  cells[28][0] = ;
+////  cells[29][0] = ;
+
+}
+
+
+void keyPressed() {
+  //if (key == 'g' || key == 'G') {
+  //  drawGrid = !drawGrid;
+  //  drawCells();
+  //  
+  //} else 
+  //if(key == 's' || key == 'S') {
+  //  save("image.png");
+  //  
+  //} else {
+  //  drawOnce();
+  //
+  //}
+}
+
+
+
+
+
+void drawGene(int gene, int[] geneArray, int x, int y) {
+  switch(gene) {
+  case 1: stroke(#336633); break;
+  case 2: stroke(#009900); break;
+  case 3: stroke(#339933); break;
+  case 4: stroke(#669966); break;
+  case 5: stroke(#99CC99); break;
+  case 6: stroke(#FFCCFF); break;
+  case 7: stroke(#FF99FF); break;
+  case 8: stroke(#FF66FF); break;
+  case 9: stroke(#FF3300); break;
+  case 10: stroke(#FF9900); break;
+  case 11: stroke(#FF6600); break;
+  case 12: stroke(#FF6600); break;
+  case 13: stroke(#003300); break;
+  case 14: stroke(#00CC33); break;
+  case 15: stroke(#006633); break;
+  case 16: stroke(#339966); break;
+  case 17: stroke(#66CC99); break;
+  case 18: stroke(#99FFCC); break;
+  case -1: stroke(#CCFFFF); break;
+  case -2: stroke(#3399FF); break;
+  case -3: stroke(#99CCFF); break;
+  case -4: stroke(#CCCCFF); break;
+  case -5: stroke(#FFCC00); break;
+  case -6: stroke(#FFCC00); break;
+  case -7: stroke(#663399); break;
+  case -8: stroke(#330066); break;
+  case -9: stroke(#9900CC); break;
+  case -10: stroke(#CC00CC); break;
+  case -11: stroke(#00FF33); break;
+  case -12: stroke(#33FF66); break;
+  case -13: stroke(#009933); break;
+  case -14: stroke(#00CC66); break;
+  case -15: stroke(#33FF99); break;
+  case -16: stroke(#99FFFF); break;
+  case -17: stroke(#99CCCC); break;
+  case -18: stroke(#0066CC); break;
+
+        case 0: default: stroke(255); break;  
+  }
+  point(x, y);
+}
+
+//void drawGeneDebug(int gene, int[] geneArray, int x, int y) {
+//  if(drawGrid) {
+//    stroke(230);
+//    noFill();
+//    rect(x, y, DRAW_CELL_WIDTH, DRAW_CELL_HEIGHT);
+//  }
+//  
+//  if(gene == 0) return; 
+//  
+//  fill(0);
+//  noStroke();
+//  textFont(font12);
+//  textAlign(RIGHT);
+//  text(gene+"", x + DRAW_CELL_WIDTH -2, y + DRAW_CELL_HEIGHT -3);
+//}
+
+
+void drawCell(int gene, int x, int y) {
+  switch(gene) {
+  case 1: drawGene(gene, GENE1, x, y); break;
+  case 2: drawGene(gene, GENE2, x, y); break;
+  case 3: drawGene(gene, GENE3, x, y); break;
+  case 4: drawGene(gene, GENE4, x, y); break;
+  case 5: drawGene(gene, GENE5, x, y); break;
+  case 6: drawGene(gene, GENE6, x, y); break;
+  case 7: drawGene(gene, GENE7, x, y); break;
+  case 8: drawGene(gene, GENE8, x, y); break;
+  case 9: drawGene(gene, GENE9, x, y); break;
+  case 10: drawGene(gene, GENE10, x, y); break;
+  case 11: drawGene(gene, GENE11, x, y); break;
+  case 12: drawGene(gene, GENE12, x, y); break;
+  case 13: drawGene(gene, GENE13, x, y); break;
+  case 14: drawGene(gene, GENE14, x, y); break;
+  case 15: drawGene(gene, GENE15, x, y); break;
+  case 16: drawGene(gene, GENE16, x, y); break;
+  case 17: drawGene(gene, GENE17, x, y); break;
+  case 18: drawGene(gene, GENE18, x, y); break;
+  case -1: drawGene(gene, GENEn1, x, y); break;
+  case -2: drawGene(gene, GENEn2, x, y); break;
+  case -3: drawGene(gene, GENEn3, x, y); break;
+  case -4: drawGene(gene, GENEn4, x, y); break;
+  case -5: drawGene(gene, GENEn5, x, y); break;
+  case -6: drawGene(gene, GENEn6, x, y); break;
+  case -7: drawGene(gene, GENEn7, x, y); break;
+  case -8: drawGene(gene, GENEn8, x, y); break;
+  case -9: drawGene(gene, GENEn9, x, y); break;
+  case -10: drawGene(gene, GENEn10, x, y); break;
+  case -11: drawGene(gene, GENEn11, x, y); break;
+  case -12: drawGene(gene, GENEn12, x, y); break;
+  case -13: drawGene(gene, GENEn13, x, y); break;
+  case -14: drawGene(gene, GENEn14, x, y); break;
+  case -15: drawGene(gene, GENEn15, x, y); break;
+  case -16: drawGene(gene, GENEn16, x, y); break;
+  case -17: drawGene(gene, GENEn17, x, y); break;
+  case -18: drawGene(gene, GENEn18, x, y); break;
+  case 0: default: drawGene(gene, GENE0, x, y); break;  
+  }
+}
+
+
+int[] GENE0 = new int[] {0,0,0,0,0,0,0,0};
+
+int[] GENE1   = new int[] {0,0,0,0,0,0,0,1};
+int[] GENE2   = new int[] {0,0,0,0,0,0,1,0};
+int[] GENE3   = new int[] {0,0,0,0,0,0,1,1};
+int[] GENE4   = new int[] {0,0,0,0,0,1,0,0};
+int[] GENE5   = new int[] {0,0,0,0,0,1,0,1};
+int[] GENE6   = new int[] {0,0,0,0,0,1,1,0};
+int[] GENE7   = new int[] {0,0,0,0,0,1,1,1};
+int[] GENE8   = new int[] {0,0,0,0,1,0,0,0};
+int[] GENE9   = new int[] {0,0,0,0,1,0,0,1};
+int[] GENE10  = new int[] {0,0,0,0,1,0,1,0};
+int[] GENE11  = new int[] {0,0,0,0,1,0,1,1};
+int[] GENE12  = new int[] {0,0,0,0,1,1,0,0};
+int[] GENE13  = new int[] {0,0,0,0,1,1,0,1};
+int[] GENE14  = new int[] {0,0,0,0,1,1,1,0};
+int[] GENE15  = new int[] {0,0,0,0,1,1,1,1};
+int[] GENE16  = new int[] {0,0,0,1,0,0,0,0};
+int[] GENE17  = new int[] {0,0,0,1,0,0,0,1};
+int[] GENE18  = new int[] {0,0,0,1,0,0,1,0};
+
+int[] GENEn1  = new int[] {1,1,1,1,1,1,1,0};
+int[] GENEn2  = new int[] {1,1,1,1,1,1,0,1};
+int[] GENEn3  = new int[] {1,1,1,1,1,1,0,0};
+int[] GENEn4  = new int[] {1,1,1,1,1,0,1,1};
+int[] GENEn5  = new int[] {1,1,1,1,1,0,1,0};
+int[] GENEn6  = new int[] {1,1,1,1,1,0,0,1};
+int[] GENEn7  = new int[] {1,1,1,1,1,0,0,0};
+int[] GENEn8  = new int[] {1,1,1,1,0,1,1,1};
+int[] GENEn9  = new int[] {1,1,1,1,0,1,1,0};
+int[] GENEn10 = new int[] {1,1,1,1,0,1,0,1};
+int[] GENEn11 = new int[] {1,1,1,1,0,1,0,0};
+int[] GENEn12 = new int[] {1,1,1,1,0,0,1,1};
+int[] GENEn13 = new int[] {1,1,1,1,0,0,1,0};
+int[] GENEn14 = new int[] {1,1,1,1,0,0,0,1};
+int[] GENEn15 = new int[] {1,1,1,1,0,0,0,0};
+int[] GENEn16 = new int[] {1,1,1,0,1,1,1,1};
+int[] GENEn17 = new int[] {1,1,1,0,1,1,1,0};
+int[] GENEn18 = new int[] {1,1,1,0,1,1,0,1};
+void shiftNorm(int gene, int a, int g) {
+  cells[wrapToUniverse(a)][g] = gene;
+}
+
+void zeroNorm(int a, int g) {
+  cells[a][g] = 0;
+}
+
+void aNorm(int a, int g) {
+  if(!isBelowEmptyCell(a,g)) {  //collision under occupied cell
+    zeroNorm(a,g);              //set to zero
+    
+  } else {
+    int U = getUvalue(a,g);
+    int V = getVvalue(a,g);
+    int uv = getU(a,g) + getV(a,g);
+    
+    if(haveSameSign(U, V)) {    //U and V genes have same sign
+      cells[a][g] = uv;         //u+v
+      
+    } else {                    //U and V genes have different sign
+      cells[a][g] = -1 * uv;    //-(u+v)
     }
+  }
 }
 
-function createNewCell() {
-    var initialMutationRate = baseMutationRate + random(-mutationRateRange, mutationRateRange);
-    cells.push(new Cell(mouseX, mouseY, parseInt(random(GENE_MIN, GENE_MAX + 1)), initialMutationRate));
-    println("New cell created at mouse position.");
-}
-
-function changeRefreshInterval() {
-    setNewRefreshInterval();
-    lastRefreshTime = millis();
-    println("Refresh interval changed by click.");
-}
-
-function changeInteractionRadius() {
-    interactionRadius = random(10, 50);
-    println("Interaction radius changed to: " + interactionRadius);
-}
-
-function randomizeSingleParameter() {
-    var parameterToChange = parseInt(random(0, 5));
-
-    switch (parameterToChange) {
-        case 0:
-            baseMutationRate = random(2, 8);
-            println("Base Mutation Rate changed to: " + baseMutationRate);
-            break;
-        case 1:
-            mutationRateRange = random(1, 4);
-            println("Mutation Rate Range changed to: " + mutationRateRange);
-            break;
-        case 2:
-            CELL_RADIUS = random(minRadius, maxRadius);
-            println("Cell Radius changed to: " + CELL_RADIUS);
-            break;
-        case 3:
-            baseMaxSpeed = random(1, 2);
-            println("Base Max Speed changed to: " + baseMaxSpeed);
-            break;
-        case 4:
-            foodDensity = random(0.01, 0.05);
-            println("Food Density changed to: " + foodDensity);
-            break;
+void bNorm(int a, int g) {
+  if(!isBelowEmptyCell(a,g)) {  //collision under occupied cell
+    zeroNorm(a,g);              //set to zero
+    
+  } else {
+    int U = getUvalue(a,g);
+    int V = getVvalue(a,g);
+    int uv1 = getU(a,g) + getV(a,g) - 1;
+    
+    if(haveSameSign(U, V)) {    //U and V genes have same sign
+      cells[a][g] = uv1;        //u+v-1
+      
+    } else {                    //U and V genes have different sign
+      cells[a][g] = -1 * uv1;   //-(u+v-1)
     }
+  }
 }
 
-function killCellsNearMouse() {
-    var killRadius = 100;
-    for (var i = cells.length - 1; i >= 0; i--) {
-        var cell = cells[i];
-        if (dist(mouseX, mouseY, cell.position.x, cell.position.y) < killRadius) {
-            cells.splice(i, 1);
-        }
-    }
-    println("Killed cells near the mouse.");
+void cNorm(int a, int g) {
+  if(!isBelowEmptyCell(a,g)) {  //collision under occupied cell
+    zeroNorm(a,g);              //set to zero
+    
+  } else {                      //collision under empty cell
+    int U = getUvalue(a,g);
+    int V = getVvalue(a,g);
+    cells[a][g] = V-U;          //V - U
+  }
 }
 
-function cycleBackgroundColor() {
-    backgroundColorIndex = (backgroundColorIndex + 1) % availableBackgroundColors.length;
-    targetBackgroundColor = availableBackgroundColors[backgroundColorIndex];
-}
-function getInvertedColor(x, y) {
-    var currentColor = get(x, y); // Get the color at the mouse position
-    var r = (currentColor >> 16) & 0xFF;
-    var g = (currentColor >> 8) & 0xFF;
-    var b = currentColor & 0xFF;
-    return ((255 - r) << 16) | ((255 - g) << 8) | (255 - b); // Invert the color
-}
-function updateCursor() {
-    // Basic Example Cursor
-    if (hoveringCell) {
-      cursor(CROSS); // A Processing.js constant for a cross cursor
-    } else {
-      cursor(ARROW); // A Processing.js constant for an arrow cursor (default)
-    }
+void dNorm(int a, int g) {
+  int P = getCellValue(a, g-1); //note i'm assuming the "Xa,g+1" in the 1957 paper is a typo 
+                                //since future generations are always empty; it should be "Xa,g-1" 
+  int A = getCellValue(a+P, g-1);
+  int B = getCellValue(a-P, g-1);
+  
+  if(A != B) {                  //collision if not equal
+    zeroNorm(a,g);              //set to zero
+    
+  } else {
+    cells[a][g] = (-1 * P) + (2 * A); //
+  }
 }
 
-function setup() {
-    size(560, 340);
-    frameRate(FRAME_RATE);
-    smooth();
-
-    maxRadius = random(2, 200);
-    BACKGROUND_COLOR = (255 << 16) | (255 << 8) | 255;
-    redColor = (255 << 16) | (0 << 8) | 0;
-    greenColor = (0 << 16) | (255 << 8) | 0;
-    blueColor = (0 << 16) | (0 << 8) | 255;
-    reproductionThreshold = random(0.7, 7);
-    randomizeSimulation();
-    setNewRefreshInterval();
-    lastRefreshTime = millis();
-    textFont(createFont("Arial", 12)); // A basic default font for Processing.js
-
-    cursor();
-    targetBackgroundColor = BACKGROUND_COLOR;
-    targetRedColor = redColor;
-    targetGreenColor = greenColor;
-    targetBlueColor = blueColor;
+boolean haveSameSign(int A, int B) {
+  if(A>0 && B>0) return true;
+  if(A<0 && B<0) return true;
+  return false;
 }
+
+//safe for universe wrapping
+int getCellValue(int a, int g) {
+  if(g < 0) return 0;
+  a = wrapToUniverse(a);
+//  println("cells["+a+"]["+g+"]");
+//  println("\t" + cells[a][g]);
+  return cells[a][g];
+}
+
+//positive distance to the RIGHT of first non empty cell
+int getU(int a, int g) {
+  int u = 0;
+  while(getCellValue(a + u, g - 1) == 0) {
+    u++;
+    u = wrapToUniverse(u);
+  }
+  return u;
+}
+
+//positive distance to the LEFT of first non empty cell
+int getV(int a, int g) {
+  int v = 0;
+  while(getCellValue(a-v, g-1) == 0) {
+    v++;
+    v = wrapToUniverse(v);
+  }
+  return v;
+}
+
+//value of U gene (which is to the right)
+int getUvalue(int a, int g) {
+  return getCellValue(a + getU(a,g), g-1);
+}
+
+//value of V gene (which is to the left)
+int getVvalue(int a, int g) {
+  return getCellValue(a - getV(a,g), g-1);
+}
+
+//int getValueAbove(int a, int g) {
+//  return cells[a][g-1];
+//}
+
+boolean isBelowEmptyCell(int a, int g) {
+  if(g == 0) return false; 
+  return cells[a][g-1] == 0;
+}
+
+int wrapToUniverse(int i) {
+  i = i % UNIVERSE;
+  if(i < 0) i = UNIVERSE+i; //the universe wraps at left
+  if(i >= UNIVERSE) i = i-UNIVERSE; //the universe wraps at right
+  return i % UNIVERSE;
+}
+
