@@ -1,3 +1,4 @@
+// --- Constants and Parameters ---
 var UNIVERSE_SIZE = 120;
 var baseMutationRate = 5;
 var mutationRateRange = 2;
@@ -77,7 +78,7 @@ Cell.prototype.update = function() {
     console.log("Cell update called");
     if (this.alive) {
            console.log("Cell is alive, position:", this.position.x, this.position.y); // Check position
-        var distanceToMouse = dist(this.position.x, this.position.y, mouseX, mouseY);
+        var distanceToMouse = processing.dist(this.position.x, this.position.y, mouseX, mouseY);
         var speedModifier = 1.0;
         if (distanceToMouse < slowDownRadius) {
             speedModifier = speedReductionFactor;
@@ -116,9 +117,9 @@ Cell.prototype.interact = function(other) {
         }
 
         // Collision Response
-        PVector collisionNormal = PVector.sub(other.position, this.position).normalize();
+        var collisionNormal = PVector.sub(other.position, this.position).normalize();
         float overlap = (this.radius + other.radius) - distance;
-        float separationAmount = overlap * 0.5f;
+        var separationAmount = overlap * 0.5f;
 
         this.position.sub(PVector.mult(collisionNormal, separationAmount));
         other.position.add(PVector.mult(collisionNormal, separationAmount));
@@ -205,7 +206,7 @@ var monoFont;
 var hoveringCell = false;
 var fixedGapSize = 36;
 
-function setup(processing) {
+function setup() {
     processing.size(560, 340);
     processing.frameRate(12);
     processing.smooth();
@@ -220,8 +221,10 @@ function setup(processing) {
     setNewRefreshInterval();
     lastRefreshTime = millis();
   
-    monoFont = processing.createFont("Arial", 12);
-  processing.textFont(monoFont);
+
+  monoFont = processing.createFont("Arial", 12);
+
+    processing.textFont(monoFont);
 
     processing.cursor();
     targetBackgroundColor = BACKGROUND_COLOR;
@@ -279,7 +282,7 @@ function draw() {
         cell.update();
         cell.checkSurvival();
 
-        var distanceToCell = dist(mouseX, mouseY, cell.position.x, cell.position.y);
+        var distanceToCell = processing.dist(mouseX, mouseY, cell.position.x, cell.position.y);
         if (distanceToCell < cell.radius) {
             hoveringCell = true;
             processing.stroke(0);
@@ -341,9 +344,9 @@ function lerpColor(c1, c2, amt) {
     var g2 = (c2 >> 8) & 0xFF;
     var b2 = c2 & 0xFF;
 
-    var r = lerp(r1, r2, amt);
-    var g = lerp(g1, g2, amt);
-    var b = lerp(b1, b2, amt);
+    var r = processing.lerp(r1, r2, amt);
+    var g = processing.lerp(g1, g2, amt);
+    var b = processing.lerp(b1, b2, amt);
 
     return (int(r) << 16) | (int(g) << 8) | int(b);
 }
