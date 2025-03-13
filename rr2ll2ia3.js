@@ -1,3 +1,6 @@
+// Sketch code
+var Sketch = function(processing) {
+
 // --- Constants and Parameters ---
 var UNIVERSE_SIZE = 120;
 var baseMutationRate = 5;
@@ -56,10 +59,12 @@ var colorTransitionSpeed = 0.6;
 var targetBackgroundColor;
 var targetRedColor, targetGreenColor, targetBlueColor;
 
+var PVector = processing.PVector;
+
 // --- Cell Representation ---
 var Cell = function(x, y, gene, mutationRate) {
     console.log("Created cell at:", x, y, gene, mutationRate); // Check creation
-    this.position = new PVector(x, y);
+    this.position = new PVector(x, y, processing);
     this.velocity = PVector.random2D();
     var randomVector = PVector.random2D();
         console.log("Random vector:", randomVector.x, randomVector.y);
@@ -78,7 +83,7 @@ Cell.prototype.update = function() {
     console.log("Cell update called");
     if (this.alive) {
            console.log("Cell is alive, position:", this.position.x, this.position.y); // Check position
-        var distanceToMouse = processing.dist(this.position.x, this.position.y, mouseX, mouseY);
+        var distanceToMouse = processing.dist(this.position.x, this.position.y, processing.mouseX, processing.mouseY);
         var speedModifier = 1.0;
         if (distanceToMouse < slowDownRadius) {
             speedModifier = speedReductionFactor;
@@ -117,7 +122,7 @@ Cell.prototype.interact = function(other) {
         }
 
         // Collision Response
-        var collisionNormal = PVector.sub(other.position, this.position).normalize();
+        PVector collisionNormal = PVector.sub(other.position, this.position).normalize();
         float overlap = (this.radius + other.radius) - distance;
         float separationAmount = overlap * 0.5f;
 
@@ -205,9 +210,8 @@ var cells = [];
 var monoFont;
 var hoveringCell = false;
 var fixedGapSize = 36;
-var processing;
 
-function setup() {
+this.setup = function() {
     processing.size(560, 340);
     processing.frameRate(12);
     processing.smooth();
@@ -221,9 +225,9 @@ function setup() {
     randomizeSimulation();
     setNewRefreshInterval();
     lastRefreshTime = millis();
-     monoFont = processing.createFont("Arial", 12);
 
-  processing.textFont(monoFont);
+       monoFont = processing.createFont("Arial", 12);
+ processing.textFont(monoFont);
 
     processing.cursor();
     targetBackgroundColor = BACKGROUND_COLOR;
@@ -247,8 +251,8 @@ function randomizeSimulation() {
         cells.push(new Cell(mouseX, mouseY, int(processing.random(GENE_MIN, GENE_MAX + 1)), initialMutationRate));
     }
 
-    for (var i = 0; i < width * height * foodDensity / 2; i++) {
-        foodParticles.push(new PVector(processing.random(width), processing.random(height)));
+    for (var i = 0; i < processing.width * processing.height * foodDensity / 2; i++) {
+        foodParticles.push(new PVector(processing.random(processing.width), processing.random(processing.height)));
     }
 }
 
@@ -257,12 +261,12 @@ function setNewRefreshInterval() {
     println("Next refresh in " + refreshInterval + " seconds.");
 }
 
-function draw() {
+this.draw = function() {
     BACKGROUND_COLOR = lerpColor(BACKGROUND_COLOR, targetBackgroundColor, colorTransitionSpeed);
     processing.background(BACKGROUND_COLOR);
 
     if (processing.random(1) < foodDensity) {
-        foodParticles.push(new PVector(processing.random(width), processing.random(height)));
+        foodParticles.push(new PVector(processing.random(processing.width), processing.random(processing.height)));
     }
 
     processing.stroke((200 << 16) | (100 << 8) | 0);
@@ -281,7 +285,7 @@ function draw() {
         cell.update();
         cell.checkSurvival();
 
-        var distanceToCell = processing.dist(mouseX, mouseY, cell.position.x, cell.position.y);
+        var distanceToCell = processing.dist(processing.mouseX, processing.mouseY, cell.position.x, cell.position.y);
         if (distanceToCell < cell.radius) {
             hoveringCell = true;
             processing.stroke(0);
@@ -354,7 +358,7 @@ function displayCellCount() {
     processing.fill(200);
     processing.textFont(monoFont);
     textAlign(LEFT, CENTER);
-    processing.text(String(cells.length), 12, height / 2);
+    processing.text(String(cells.length), 12, processing.height / 2);
 }
 
 function displayCellCounts() {
@@ -377,15 +381,15 @@ function displayCellCounts() {
 
     processing.fill(0, 0, 255);
     textAlign(RIGHT, BOTTOM);
-    processing.text(String(blueCount), width - 12, height - 10);
+    processing.text(String(blueCount), width - 12, processing.height - 10);
 
     processing.fill(255, 0, 0);
     textAlign(LEFT, BOTTOM);
-    processing.text(String(redCount), 12, height - 10);
+    processing.text(String(redCount), 12, processing.height - 10);
 
     processing.fill(0, 255, 0);
     textAlign(CENTER, BOTTOM);
-    processing.text(String(greenCount), width / 2, height - 10);
+    processing.text(String(greenCount), width / 2, processing.height - 10);
 
     processing.fill(0, 0, 0);
     textAlign(LEFT, TOP);
@@ -419,10 +423,11 @@ function shiftColors() {
 function randomizeColors() {
     targetRedColor = (int(processing.random(255)) << 16) | (int(processing.random(255)) << 8) | int(processing.random(255));
     targetGreenColor = (int(processing.random(255)) << 16) | (int(processing.random(255)) << 8) | int(processing.random(255));
+    targetBlueColor = (int(processing.random(255)) << 16) | (int(processing.random(255)) << 8) | int(processing.random(255));
     println("Randomized cell colors.");
 }
 
-function mouseClicked() {
+this.mouseClicked = function() {
     var action = int(processing.random(0, 9));
     switch (action) {
         case 0:
@@ -510,7 +515,7 @@ function killCellsNearMouse() {
     var killRadius = 100;
     for (var i = cells.length - 1; i >= 0; i--) {
         var cell = cells[i];
-        if (processing.dist(mouseX, mouseY, cell.position.x, cell.position.y) < killRadius) {
+        if (dist(mouseX, mouseY, cell.position.x, cell.position.y) < killRadius) {
             cells.splice(i, 1);
         }
     }
@@ -536,4 +541,5 @@ function updateCursor() {
 
 function constrain(val, minVal, maxVal) {
   return Math.max(minVal, Math.min(maxVal, val));
+}
 }
