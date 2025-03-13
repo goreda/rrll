@@ -72,7 +72,7 @@ var Cell = function(x, y, gene, mutationRate) {
 
 Cell.prototype.update = function() {
     if (this.alive) {
-        var distanceToMouse = dist(this.position.x, this.position.y, mouseX, mouseY);
+        var distanceToMouse = processing.dist(this.position.x, this.position.y, mouseX, mouseY);
         var speedModifier = 1.0;
         if (distanceToMouse < slowDownRadius) {
             speedModifier = speedReductionFactor;
@@ -246,7 +246,7 @@ function draw() {
         cell.update();
         cell.checkSurvival();
 
-        var distanceToCell = dist(mouseX, mouseY, cell.position.x, cell.position.y);
+        var distanceToCell = processing.dist(mouseX, mouseY, cell.position.x, cell.position.y);
         if (distanceToCell < cell.radius) {
             hoveringCell = true;
             processing.stroke(0);
