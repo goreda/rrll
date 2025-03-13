@@ -15,9 +15,10 @@
   <script>
     var canvas = document.getElementById('mycanvas');
     var processingInstance = new Processing(canvas, function(processing) {
-        processing.draw = new Sketch(processing).draw;
-        processing.setup = new Sketch(processing).setup;
-         processing.mouseClicked = new Sketch(processing).mouseClicked;
+        let sketch = new Sketch(processing);
+          processing.draw = sketch.draw.bind(sketch);
+        processing.setup = sketch.setup.bind(sketch);
+         processing.mouseClicked = sketch.mouseClicked.bind(sketch);
     });
   </script>
 </body>
