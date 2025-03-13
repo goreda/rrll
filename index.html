@@ -14,14 +14,10 @@
   <script src="rr2ll2ia3.js"></script>
   <script>
     var canvas = document.getElementById('mycanvas');
-    var processingInstance;
     var processingInstance = new Processing(canvas, function(processing) {
-     window.processing = processing;
-      processing.size(560, 340);
-      processing.noSmooth();
-      setup();
-      draw();
-      mouseClicked();
+        processing.draw = new Sketch(processing).draw;
+        processing.setup = new Sketch(processing).setup;
+         processing.mouseClicked = new Sketch(processing).mouseClicked;
     });
   </script>
 </body>
