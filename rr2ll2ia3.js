@@ -147,7 +147,7 @@ Cell.prototype.reproduce = function(other) {
         var newPosition = PVector.add(this.position, other.position).div(2);
         newPosition.add(PVector.random2D().mult(this.radius));
 
-        cells.push(new Cell(newPosition.x, newPosition.y, newGene, newMutationRate));
+        cells.push(new Cell(processing.random(width), processing.random(height), parseInt(processing.random(GENE_MIN, GENE_MAX + 1)), initialMutationRate));
     }
 }
 
@@ -198,7 +198,7 @@ var monoFont;
 var hoveringCell = false;
 var fixedGapSize = 36;
 
-function setup() {
+function setup(processing) {
     processing.size(560, 340);
     FRAME_RATE = 12;
     processing.frameRate(FRAME_RATE);
@@ -210,8 +210,8 @@ function setup() {
     greenColor = (0 << 16) | (255 << 8) | 0;
     blueColor = (0 << 16) | (0 << 8) | 255;
     reproductionThreshold = processing.random(0.7, 7);
-    randomizeSimulation();
-    setNewRefreshInterval();
+    randomizeSimulation(processing);
+    setNewRefreshInterval(processing);
     lastRefreshTime = millis();
     monoFont = processing.createFont("Arial", 12);
 
@@ -222,7 +222,7 @@ function setup() {
     targetBlueColor = blueColor;
 }
 
-function draw() {
+function draw(processing) {
     BACKGROUND_COLOR = lerpColor(BACKGROUND_COLOR, targetBackgroundColor, colorTransitionSpeed);
     processing.background(BACKGROUND_COLOR);
 
@@ -265,12 +265,12 @@ function draw() {
         }
     }
 
-    renderCellEllipses();
+    renderCellEllipses(processing);
 
     if (millis() - lastRefreshTime > refreshInterval * 1000) {
         println("Random refresh!");
-        randomizeSimulation();
-        setNewRefreshInterval();
+        randomizeSimulation(processing);
+        setNewRefreshInterval(processing);
         lastRefreshTime = millis();
     }
 
@@ -278,14 +278,14 @@ function draw() {
     greenColor = lerpColor(greenColor, targetGreenColor, colorTransitionSpeed);
     blueColor = lerpColor(blueColor, targetBlueColor, colorTransitionSpeed);
 
-    displayCellCount();
-    displayCellCounts();
-    displayMouseCoordinates();
+    displayCellCount(processing);
+    displayCellCounts(processing);
+    displayMouseCoordinates(processing);
 
     updateCursor();
 }
 
-function renderCellEllipses() {
+function renderCellEllipses(processing) {
     for (var i = 0; i < cells.length; i++) {
         var cell = cells[i];
         if (cell.alive) {
@@ -315,14 +315,14 @@ function lerpColor(c1, c2, amt) {
     return (parseInt(r) << 16) | (parseInt(g) << 8) | parseInt(b);
 }
 
-function displayCellCount() {
+function displayCellCount(processing) {
     processing.fill(200);
     processing.textFont(monoFont);
     textAlign(LEFT, CENTER);
     processing.text(String(cells.length), 12, height / 2);
 }
 
-function displayCellCounts() {
+function displayCellCounts(processing) {
     processing.textFont(monoFont);
 
     var redCount = 0;
@@ -361,7 +361,7 @@ function displayCellCounts() {
     processing.text("AUTOMATA", width - 10, 10);
 }
 
-function displayMouseCoordinates() {
+function displayMouseCoordinates(processing) {
     processing.textFont(monoFont);
     var coordinateTextColor = getInvertedColor(mouseX, mouseY);
     processing.fill(coordinateTextColor);
@@ -388,7 +388,7 @@ function randomizeColors() {
     println("Randomized cell colors.");
 }
 
-function mouseClicked() {
+function mouseClicked(processing) {
     var action = parseInt(processing.random(0, 9));
     switch (action) {
         case 0:
@@ -441,26 +441,33 @@ function changeInteractionRadius() {
 function randomizeSingleParameter() {
     var parameterToChange = parseInt(processing.random(0, 5));
 
-    switch (parameterToChange) {
+    switch (action) {
         case 0:
-            baseMutationRate = processing.random(2, 8);
-            println("Base Mutation Rate changed to: " + baseMutationRate);
+            createNewCell();
             break;
         case 1:
-            mutationRateRange = processing.random(1, 4);
-            println("Mutation Rate Range changed to: " + mutationRateRange);
+            changeRefreshInterval();
             break;
         case 2:
-            CELL_RADIUS = processing.random(minRadius, maxRadius);
-            println("Cell Radius changed to: " + CELL_RADIUS);
+            changeInteractionRadius();
             break;
         case 3:
-            baseMaxSpeed = processing.random(1, 2);
-            println("Base Max Speed changed to: " + baseMaxSpeed);
+            randomizeSingleParameter();
             break;
         case 4:
-            foodDensity = processing.random(0.01, 0.05);
-            println("Food Density changed to: " + foodDensity);
+            killCellsNearMouse();
+            break;
+        case 9:
+            cycleBackgroundColor();
+            break;
+        case 6:
+            shiftColors();
+            break;
+        case 7:
+            randomizeSimulation();
+            break;
+        case 8:
+            randomizeColors();
             break;
     }
 }
