@@ -1,25 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>Cellular Automata</title>
-  <script src="https://cdn.jsdelivr.net/processing.js/1.4.8/processing.min.js"></script>
-  <style>
-    body { margin: 0; display: flex; justify-content: center; align-items: center; background-color: black; }
-    canvas { border: none; width: 560px; height: 340px; }
-  </style>
+    <title>Cellular Automata</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/processing.js/1.4.8/processing.min.js"></script>
 </head>
 <body>
-  <canvas id="mycanvas"></canvas>
-  <script src="rr2ll2ia3.js"></script>
-  <script>
-    var canvas = document.getElementById('mycanvas');
-    var processingInstance = new Processing(canvas, function(processing) {
-       var sketch = new Sketch(processing);
-       processing.draw = sketch.draw;
-       processing.setup = sketch.setup;
-        processing.mouseClicked = sketch.mouseClicked;
-    });
-  </script>
+    <canvas data-processing-sources="rr2ll2ia3.pde"></canvas>
 </body>
 </html>
