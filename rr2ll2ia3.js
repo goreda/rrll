@@ -117,9 +117,9 @@ Cell.prototype.interact = function(other) {
         }
 
         // Collision Response
-        var collisionNormal = PVector.sub(other.position, this.position).normalize();
+        PVector collisionNormal = PVector.sub(other.position, this.position).normalize();
         float overlap = (this.radius + other.radius) - distance;
-        var separationAmount = overlap * 0.5f;
+        float separationAmount = overlap * 0.5f;
 
         this.position.sub(PVector.mult(collisionNormal, separationAmount));
         other.position.add(PVector.mult(collisionNormal, separationAmount));
@@ -205,6 +205,7 @@ var cells = [];
 var monoFont;
 var hoveringCell = false;
 var fixedGapSize = 36;
+var processing;
 
 function setup() {
     processing.size(560, 340);
@@ -221,10 +222,8 @@ function setup() {
     setNewRefreshInterval();
     lastRefreshTime = millis();
   
-
-  monoFont = processing.createFont("Arial", 12);
-
-    processing.textFont(monoFont);
+    monoFont = processing.createFont("Arial", 12);
+  processing.textFont(monoFont);
 
     processing.cursor();
     targetBackgroundColor = BACKGROUND_COLOR;
