@@ -1,55 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Processing Sketch</title>
-    <style>
-        html, body {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: black;
-        }
-
-        canvas {
-            border: none;
-            /* set to null or 0 to disable */
-            width: 560px;  /* Match your .pde canvas width (1680/3 = 560) */
-            height: 340px; /* Match your .pde canvas height (1020/3 = 340) */
-        }
-    </style>
-    <!-- Link to the custom processing.js file from your GitHub repository -->
-    <script type="text/javascript" src="https://raw.githubusercontent.com/processing/processing.js/version1.4.8/processing.js"></script>
-</head>
-<body>
-    <canvas id="processing-canvas"></canvas>
-
-    <script>
-        // Load the .pde file from GitHub
-        var canvas = document.getElementById('processing-canvas');
-
-        // Use Processing.js to run the sketch.
-        var processingInstance = new Processing(canvas, function(processing) {
-            // Override sketchPath so that it points to your .pde file
-            processing.sketchPath = "https://raw.githubusercontent.com/goreda/rrll/main/rr2ll2ia3.pde";
-
-            // Function to load and run the sketch
-            var loadSketch = function() {
-                // Use Processing.js loadSketch function
-                processing.loadSketchFromSources();
-            }
-           
-          processing.size(560, 340);
-          
-            // Call the loadSketch function to run the sketch
-            loadSketch();
-        });
-
-    </script>
-</body>
-</html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Simple Processing.js Test</title>
+      <script src="https://raw.githubusercontent.com/processing/processing.js/version1.4.8/processing.js"></script>
+    </head>
+    <body>
+      <canvas id="mycanvas"></canvas>
+      <script type="text/processing" data-processing-target="mycanvas">
+        size(200, 200);
+        background(255, 0, 0); // Red
+        ellipse(100, 100, 50, 50); // Circle
+      </script>
+    </body>
+    </html>
