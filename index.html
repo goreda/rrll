@@ -21,48 +21,22 @@
             width: 511px;  /* Match your .pde canvas width */
             height: 512px; /* Match your .pde canvas height */
         }
-
-        .info {
-            color: white;
-            text-align: center;
-            font-family: Arial, sans-serif;
-            padding: 10px;
-        }
-
-        a {
-            color: #00c8ff;
-            text-decoration: none;
-        }
     </style>
-
-    <!-- Load Processing.js -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/processing/processing.js@latest/processing.min.js"></script>
+    <!-- Link to the custom processing.js file from your GitHub repository -->
+    <script type="text/javascript" src="https://raw.githubusercontent.com/goreda/rrll/main/processing.js"></script>
 </head>
 <body>
-    <!-- Processing Canvas -->
     <canvas id="processing-canvas"></canvas>
 
-    <!-- Display Info Below Canvas -->
-    <div class="info">
-        <h2>Barricelli Simulation</h2>
-        <p>
-            Built with <a href="https://processing.org" target="_blank">Processing</a> and <a href="https://processingjs.org" target="_blank">Processing.js</a>
-        </p>
-        <p>
-            <a href="https://github.com/goreda/rrll/blob/main/rr2ll2ia3.pde" target="_blank">View Source Code</a>
-        </p>
-    </div>
-
     <script>
-        // Processing.js canvas setup
+        // Load the .pde file from GitHub
         var canvas = document.getElementById('processing-canvas');
         var p = new Processing(canvas, function(processing) {
-            // Fetch PDE file content from GitHub (raw URL)
-            fetch("https://raw.githubusercontent.com/goreda/rrll/main/rr2ll2ia3.pde")
+            // Fetch the .pde content from GitHub and load it into Processing.js
+            fetch('https://raw.githubusercontent.com/goreda/rrll/main/rr2ll2ia3.pde')
                 .then(response => response.text())
                 .then(data => {
-                    // Load the Processing code (PDE file content)
-                    processing.loadSketch(data);
+                    processing.loadSketch(data); // Load the PDE content into Processing.js
                 })
                 .catch(error => {
                     console.error("Error loading PDE file:", error);
