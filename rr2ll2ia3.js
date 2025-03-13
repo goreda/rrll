@@ -221,6 +221,8 @@ function setup(processing) {
     lastRefreshTime = millis();
     monoFont = processing.createFont("Arial", 12);
 
+    processing.textFont(monoFont);
+
     processing.cursor();
     targetBackgroundColor = BACKGROUND_COLOR;
     targetRedColor = redColor;
@@ -250,7 +252,7 @@ function draw(processing) {
 
     for (var i = cells.length - 1; i >= 0; i--) {
         var cell = cells[i];
-              console.log("Updating cell at:", cell.position.x, cell.position.y);
+        console.log("Updating cell at:", cell.position.x, cell.position.y);
         cell.update(processing);
         cell.checkSurvival();
 
