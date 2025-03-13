@@ -1,22 +1,15 @@
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import processing.core.PFont;
-import processing.core.PVector;
-import processing.core.PGraphics;
-
 // --- Constants and Parameters --- (These will be randomized on refresh)
 int UNIVERSE_SIZE = 120;
 float baseMutationRate = 5;
 float mutationRateRange = 2;
-float reproductionThreshold = (int) random(0.7, 7);
+float reproductionThreshold;
 float interactionRadius = 20; // Initial value, will be randomized
 int GENE_MIN = -18;
 int GENE_MAX = 18;
 float CELL_RADIUS = 10;       // Initial value, will be randomized
 float minRadius = 2;           // Minimum cell radius
-float maxRadius = (int) random(2, 200);           // Maximum cell radius
-int BACKGROUND_COLOR = color(255);
+float maxRadius;           // Maximum cell radius
+int BACKGROUND_COLOR;
 float FRAME_RATE = 12;
 float baseMaxSpeed = 0.2f; // Base max speed
 float maxSpeedVariation = 5f; //  Variation in speed
@@ -31,7 +24,7 @@ float metaballStrength = 0.02f;
 // --- Environmental Factors ---
 float foodDensity = 0.025f;
 float foodEnergyValue = 5.0f;
-List<PVector> foodParticles = new ArrayList<>();
+ArrayList<PVector> foodParticles = new ArrayList<PVector>();
 
 // --- Refresh Parameters ---
 float minRefreshInterval = 6; // seconds
@@ -54,9 +47,9 @@ int[] availableBackgroundColors = {
 };
 int backgroundColorIndex = 0; // Start with white
 
-int redColor = color(255, 0, 0);
-int greenColor = color(0, 255, 0);
-int blueColor = color(0, 0, 255);
+int redColor;
+int greenColor;
+int blueColor;
 
 // --- Color Transition Parameters ---
 float colorTransitionSpeed = 0.6f; // Adjust for desired transition speed
@@ -122,7 +115,7 @@ class Cell {
 
         if (distance < interactionRadius) {
             float influence = map(distance, 0, interactionRadius, 1, 0);
-            int geneChange = int(influence * (other.gene - this.gene) * 0.1);
+            int geneChange = (int)(influence * (other.gene - this.gene) * 0.1);
 
             float energyTransfer = energyGainFromInteraction * influence * (1 - abs(this.gene - other.gene) / (float)(GENE_MAX - GENE_MIN));
             this.energy += energyTransfer;
@@ -225,7 +218,7 @@ ArrayList<Cell> cells;
 
 // --- File Watching (Optional) ---
 long lastModifiedTime;
-String filePath = "/Users/gokcebalkan/Documents/Processing/rr2ll2ia/rr2ll2ia.pde"; //CHANGE THIS
+String filePath = "rr2ll2ia.pde"; //CHANGE THIS
 
 // --- Font ---
 PFont monoFont;
@@ -240,15 +233,24 @@ void setup() {
     
     frameRate(FRAME_RATE);
     smooth();
+    
+    // Set initial values, randomization happens in randomizeSimulation()
+    reproductionThreshold = (int) random(0.7, 7);
+    maxRadius = (int) random(2, 200);
+    BACKGROUND_COLOR = color(255);
+    redColor = color(255, 0, 0);
+    greenColor = color(0, 255, 0);
+    blueColor = color(0, 0, 255);
+    
     randomizeSimulation(); // Initialize and randomize parameters
     setNewRefreshInterval(); // Initialize the first refresh interval
     lastRefreshTime = millis(); // Initialize lastRefreshTime
 
-    lastModifiedTime = new File(filePath).lastModified();
-    println("Watching file for changes: " + filePath);
+    //lastModifiedTime = new File(filePath).lastModified(); // This doesn't work in core Processing
+    println("File watching is not supported in core Processing.");
 
     // Load a monospaced font
-    monoFont = createFont("BallPill-light", 16); // Or "Monospaced", "Consolas", etc.
+    monoFont = createFont("Monospaced", 16); // Or "Monospaced", "Consolas", etc.
 
     cursor(); // Set a default cursor
     targetBackgroundColor = BACKGROUND_COLOR; // Init target values
@@ -259,7 +261,7 @@ void setup() {
 
 // --- New Function: Randomize Simulation Parameters ---
 void randomizeSimulation() {
-    cells = new ArrayList<>();
+    cells = new ArrayList<Cell>();
     foodParticles.clear();
 
     // Randomize parameters
@@ -273,7 +275,7 @@ void randomizeSimulation() {
     // Re-initialize cells with new parameters
     for (int i = 0; i < UNIVERSE_SIZE; i++) {
         float initialMutationRate = baseMutationRate + random(-mutationRateRange, mutationRateRange);
-        cells.add(new Cell(random(width), random(height), int(random(GENE_MIN, GENE_MAX + 1)), initialMutationRate));
+        cells.add(new Cell(random(width), random(height), (int)random(GENE_MIN, GENE_MAX + 1), initialMutationRate));
     }
 
     // Re-initialize food particles
@@ -288,11 +290,11 @@ void setNewRefreshInterval() {
 }
 
 void draw() {
-    long currentModifiedTime = new File(filePath).lastModified();
+    /*long currentModifiedTime = new File(filePath).lastModified(); // This doesn't work in core Processing
     if (currentModifiedTime > lastModifiedTime) {
         println("File has changed. Restart is highly recommended.");
         lastModifiedTime = currentModifiedTime;
-    }
+    }*/
 
     // Gradual Background Color Transition
     BACKGROUND_COLOR = lerpColor(BACKGROUND_COLOR, targetBackgroundColor, colorTransitionSpeed);
@@ -576,7 +578,7 @@ void mouseClicked() {
 
 void createNewCell() {
     float initialMutationRate = baseMutationRate + random(-mutationRateRange, mutationRateRange);
-    cells.add(new Cell(mouseX, mouseY, int(random(GENE_MIN, GENE_MAX + 1)), initialMutationRate));
+    cells.add(new Cell(mouseX, mouseY, (int)random(GENE_MIN, GENE_MAX + 1), initialMutationRate));
     println("New cell created at mouse position.");
 }
 
