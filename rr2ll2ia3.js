@@ -117,7 +117,7 @@ Cell.prototype.interact = function(other) {
         }
 
         // Collision Response
-        PVector collisionNormal = PVector.sub(other.position, this.position).normalize();
+        var collisionNormal = PVector.sub(other.position, this.position).normalize();
         float overlap = (this.radius + other.radius) - distance;
         float separationAmount = overlap * 0.5f;
 
@@ -153,7 +153,7 @@ Cell.prototype.reproduce = function(other) {
         PVector newPosition = PVector.add(this.position, other.position).div(2);
         newPosition.add(PVector.random2D().mult(this.radius));
 
-        cells.push(new Cell(processing.random(width), processing.random(height), int(processing.random(GENE_MIN, GENE_MAX + 1)), newMutationRate));
+        cells.push(new Cell(mouseX, mouseY, int(processing.random(GENE_MIN, GENE_MAX + 1)), newMutationRate));
     }
 }
 
@@ -221,8 +221,8 @@ function setup() {
     randomizeSimulation();
     setNewRefreshInterval();
     lastRefreshTime = millis();
-  
-    monoFont = processing.createFont("Arial", 12);
+     monoFont = processing.createFont("Arial", 12);
+
   processing.textFont(monoFont);
 
     processing.cursor();
@@ -244,7 +244,7 @@ function randomizeSimulation() {
 
     for (var i = 0; i < UNIVERSE_SIZE; i++) {
         var initialMutationRate = baseMutationRate + processing.random(-mutationRateRange, mutationRateRange);
-        cells.push(new Cell(processing.random(width), processing.random(height), int(processing.random(GENE_MIN, GENE_MAX + 1)), initialMutationRate));
+        cells.push(new Cell(mouseX, mouseY, int(processing.random(GENE_MIN, GENE_MAX + 1)), initialMutationRate));
     }
 
     for (var i = 0; i < width * height * foodDensity / 2; i++) {
@@ -419,7 +419,6 @@ function shiftColors() {
 function randomizeColors() {
     targetRedColor = (int(processing.random(255)) << 16) | (int(processing.random(255)) << 8) | int(processing.random(255));
     targetGreenColor = (int(processing.random(255)) << 16) | (int(processing.random(255)) << 8) | int(processing.random(255));
-    targetBlueColor = (int(processing.random(255)) << 16) | (int(processing.random(255)) << 8) | int(processing.random(255));
     println("Randomized cell colors.");
 }
 
@@ -511,7 +510,7 @@ function killCellsNearMouse() {
     var killRadius = 100;
     for (var i = cells.length - 1; i >= 0; i--) {
         var cell = cells[i];
-        if (dist(mouseX, mouseY, cell.position.x, cell.position.y) < killRadius) {
+        if (processing.dist(mouseX, mouseY, cell.position.x, cell.position.y) < killRadius) {
             cells.splice(i, 1);
         }
     }
