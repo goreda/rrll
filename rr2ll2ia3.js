@@ -199,9 +199,10 @@ var hoveringCell = false;
 var fixedGapSize = 36;
 
 function setup() {
-    size(560, 340);
-    frameRate(FRAME_RATE);
-    smooth();
+    processing.size(560, 340);
+    FRAME_RATE = 12;
+    processing.frameRate(FRAME_RATE);
+    processing.smooth();
 
     maxRadius = processing.random(2, 200);
     BACKGROUND_COLOR = (255 << 16) | (255 << 8) | 255;
@@ -212,56 +213,31 @@ function setup() {
     randomizeSimulation();
     setNewRefreshInterval();
     lastRefreshTime = millis();
-    monoFont = createFont("Arial", 12);
+    monoFont = processing.createFont("Arial", 12);
 
-    cursor();
+    processing.cursor();
     targetBackgroundColor = BACKGROUND_COLOR;
     targetRedColor = redColor;
     targetGreenColor = greenColor;
     targetBlueColor = blueColor;
 }
 
-function randomizeSimulation() {
-    cells = [];
-    foodParticles = [];
-
-    UNIVERSE_SIZE = parseInt(processing.random(2, processing.random(2, 100)));
-    baseMutationRate = processing.random(2, 8);
-    mutationRateRange = processing.random(1, 4);
-    interactionRadius = processing.random(10, 30);
-    CELL_RADIUS = processing.random(minRadius, maxRadius);
-
-    for (var i = 0; i < UNIVERSE_SIZE; i++) {
-        var initialMutationRate = baseMutationRate + processing.random(-mutationRateRange, mutationRateRange);
-        cells.push(new Cell(processing.random(width), processing.random(height), parseInt(processing.random(GENE_MIN, GENE_MAX + 1)), initialMutationRate));
-    }
-
-    for (var i = 0; i < width * height * foodDensity / 2; i++) {
-        foodParticles.push(new PVector(processing.random(width), processing.random(height)));
-    }
-}
-
-function setNewRefreshInterval() {
-    refreshInterval = processing.random(minRefreshInterval, maxRefreshInterval);
-    println("Next refresh in " + refreshInterval + " seconds.");
-}
-
 function draw() {
     BACKGROUND_COLOR = lerpColor(BACKGROUND_COLOR, targetBackgroundColor, colorTransitionSpeed);
-    background(BACKGROUND_COLOR);
+    processing.background(BACKGROUND_COLOR);
 
     if (processing.random(1) < foodDensity) {
         foodParticles.push(new PVector(processing.random(width), processing.random(height)));
     }
 
-    stroke((200 << 16) | (100 << 8) | 0);
-    strokeWeight(1);
+    processing.stroke((200 << 16) | (100 << 8) | 0);
+    processing.strokeWeight(1);
     for (var i = 0; i < foodParticles.length; i++) {
         var food = foodParticles[i];
-        point(food.x, food.y);
+        processing.point(food.x, food.y);
     }
-    strokeWeight(12);
-    noStroke();
+    processing.strokeWeight(12);
+    processing.noStroke();
 
     hoveringCell = false;
 
@@ -273,11 +249,11 @@ function draw() {
         var distanceToCell = dist(mouseX, mouseY, cell.position.x, cell.position.y);
         if (distanceToCell < cell.radius) {
             hoveringCell = true;
-            stroke(0);
-            strokeWeight(2);
-            noFill();
-            ellipse(cell.position.x, cell.position.y, cell.radius * 2, cell.radius * 2);
-            noStroke();
+            processing.stroke(0);
+            processing.strokeWeight(2);
+            processing.noFill();
+            processing.ellipse(cell.position.x, cell.position.y, cell.radius * 2, cell.radius * 2);
+            processing.noStroke();
         }
 
         for (var j = i - 1; j >= 0; j--) {
@@ -313,8 +289,8 @@ function renderCellEllipses() {
     for (var i = 0; i < cells.length; i++) {
         var cell = cells[i];
         if (cell.alive) {
-            fill(cell.gene > 2 ? redColor : (cell.gene < -2 ? greenColor : blueColor));
-            ellipse(cell.position.x, cell.position.y, cell.radius * 2, cell.radius * 2);
+            processing.fill(cell.gene > 2 ? redColor : (cell.gene < -2 ? greenColor : blueColor));
+            processing.ellipse(cell.position.x, cell.position.y, cell.radius * 2, cell.radius * 2);
         }
     }
 }
@@ -340,14 +316,14 @@ function lerpColor(c1, c2, amt) {
 }
 
 function displayCellCount() {
-    fill(200);
-    textFont(monoFont);
+    processing.fill(200);
+    processing.textFont(monoFont);
     textAlign(LEFT, CENTER);
-    text(String(cells.length), 12, height / 2);
+    processing.text(String(cells.length), 12, height / 2);
 }
 
 function displayCellCounts() {
-    textFont(monoFont);
+    processing.textFont(monoFont);
 
     var redCount = 0;
     var greenCount = 0;
@@ -364,36 +340,36 @@ function displayCellCounts() {
         }
     }
 
-    fill(0, 0, 255);
+    processing.fill(0, 0, 255);
     textAlign(RIGHT, BOTTOM);
-    text(String(blueCount), width - 12, height - 10);
+    processing.text(String(blueCount), width - 12, height - 10);
 
-    fill(255, 0, 0);
+    processing.fill(255, 0, 0);
     textAlign(LEFT, BOTTOM);
-    text(String(redCount), 12, height - 10);
+    processing.text(String(redCount), 12, height - 10);
 
-    fill(0, 255, 0);
+    processing.fill(0, 255, 0);
     textAlign(CENTER, BOTTOM);
-    text(String(greenCount), width / 2, height - 10);
+    processing.text(String(greenCount), width / 2, height - 10);
 
-    fill(0, 0, 0);
+    processing.fill(0, 0, 0);
     textAlign(LEFT, TOP);
-    text("CELLULAR", 10, 10);
+    processing.text("CELLULAR", 10, 10);
 
-    fill(0, 0, 0);
+    processing.fill(0, 0, 0);
     textAlign(RIGHT, TOP);
-    text("AUTOMATA", width - 10, 10);
+    processing.text("AUTOMATA", width - 10, 10);
 }
 
 function displayMouseCoordinates() {
-    textFont(monoFont);
+    processing.textFont(monoFont);
     var coordinateTextColor = getInvertedColor(mouseX, mouseY);
-    fill(coordinateTextColor);
+    processing.fill(coordinateTextColor);
     textAlign(CENTER, TOP);
-    text(String(mouseY), width / 2, 10);
-    fill(coordinateTextColor);
+    processing.text(String(mouseY), width / 2, 10);
+    processing.fill(coordinateTextColor);
     textAlign(RIGHT, CENTER);
-    text(String(mouseX), width - 12, height / 2);
+    processing.text(String(mouseX), width - 12, height / 2);
 }
 
 function shiftColors() {
