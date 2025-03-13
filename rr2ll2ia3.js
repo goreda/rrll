@@ -123,28 +123,28 @@ Cell.prototype.interact = function(other) {
 
         // Collision Response
         var collisionNormal = PVector.sub(other.position, this.position).normalize();
-        var overlap = float (this.radius + other.radius) - distance;
-        var separationAmount = overlap * 0.5f;
+        var overlap =  (this.radius + other.radius) - distance;
+        var separationAmount = overlap * 0.5;
 
         this.position.sub(PVector.mult(collisionNormal, separationAmount));
         other.position.add(PVector.mult(collisionNormal, separationAmount));
 
         var thisVelocity = this.velocity.copy();
         var otherVelocity = other.velocity.copy();
-        float thisDot = thisVelocity.dot(collisionNormal);
-        float otherDot = otherVelocity.dot(collisionNormal);
+        var thisDot = thisVelocity.dot(collisionNormal);
+        var otherDot = otherVelocity.dot(collisionNormal);
         thisVelocity.sub(PVector.mult(collisionNormal, 2 * thisDot));
         otherVelocity.sub(PVector.mult(collisionNormal, 2 * otherDot));
-        this.velocity.lerp(thisVelocity, 0.8f);
-        other.velocity.lerp(otherVelocity, 0.8f);
-        this.velocity.add(PVector.random2D().mult(0.3f));
-        other.velocity.add(PVector.random2D().mult(0.3f));
+        this.velocity.lerp(thisVelocity, 0.8);
+        other.velocity.lerp(otherVelocity, 0.8);
+        this.velocity.add(PVector.random2D().mult(0.3));
+        other.velocity.add(PVector.random2D().mult(0.3));
     }
 }
 
 Cell.prototype.reproduce = function(other) {
     if (cells.length < UNIVERSE_SIZE * 4) {
-        float energyCost = (minEnergyForReproduction / 2) + 1;
+        var energyCost = (minEnergyForReproduction / 2) + 1;
         this.energy -= energyCost;
         other.energy -= energyCost;
 
@@ -153,7 +153,7 @@ Cell.prototype.reproduce = function(other) {
             newGene = this.mutateGene(newGene);
         }
 
-        var newMutationRate = constrain(this.mutationRate + processing.random(-mutationRateRange, mutationRateRange), 0.5f, 20);
+        var newMutationRate = constrain(this.mutationRate + processing.random(-mutationRateRange, mutationRateRange), 0.5, 20);
 
         PVector newPosition = PVector.add(this.position, other.position).div(2);
         newPosition.add(PVector.random2D().mult(this.radius));
@@ -163,7 +163,7 @@ Cell.prototype.reproduce = function(other) {
 }
 
 Cell.prototype.mutateGene = function(gene) {
-    float mutationRoll = processing.random(1);
+    var mutationRoll = processing.random(1);
     var mutationAmount;
 
     if (mutationRoll < 0.26) {
@@ -190,7 +190,7 @@ Cell.prototype.checkSurvival = function() {
         }
     }
     // Modify survival based on neighbors (example: more neighbors = longer lifespan)
-    float lifespanBonus = neighbors * 0.5f;  // Example bonus
+    float lifespanBonus = neighbors * 0.5;  // Example bonus
     if (energy < lifespanBonus) { // If energy is lower than bonus, it could die.
         this.alive = false;
     }
@@ -227,8 +227,9 @@ this.setup = function() {
     setNewRefreshInterval();
     lastRefreshTime = millis();
 
-       monoFont = processing.createFont("Arial", 12);
-  processing.textFont(monoFont);
+          monoFont = processing.createFont("Arial", 12);
+ processing.textFont(monoFont);
+
 
     processing.cursor();
     targetBackgroundColor = BACKGROUND_COLOR;
@@ -359,7 +360,7 @@ function displayCellCount() {
     processing.fill(200);
     processing.textFont(monoFont);
     textAlign(LEFT, CENTER);
-    processing.text(String(cells.length), 12, processing.height / 2);
+    processing.text(String(cells.length), 12, height / 2);
 }
 
 function displayCellCounts() {
@@ -463,7 +464,7 @@ this.mouseClicked = function() {
 
 function createNewCell() {
     var initialMutationRate = baseMutationRate + processing.random(-mutationRateRange, mutationRateRange);
-    cells.push(new Cell(mouseX, mouseY, int(processing.random(GENE_MIN, GENE_MAX + 1)), initialMutationRate));
+    cells.push(new Cell(processing.mouseX, processing.mouseY, int(processing.random(GENE_MIN, GENE_MAX + 1)), initialMutationRate));
     println("New cell created at mouse position.");
 }
 
