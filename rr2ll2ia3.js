@@ -57,11 +57,15 @@ var targetBackgroundColor;
 var targetRedColor, targetGreenColor, targetBlueColor;
 
 // --- Cell Representation ---
-var Cell = function(x, y, gene, mutationRate) {
+var Cell = function(x, y, gene, mutationRate, processing) {
+    console.log("Created cell at:", x, y, gene, mutationRate); // Check creation
     this.position = new PVector(x, y);
     this.velocity = PVector.random2D();
+    var randomVector = PVector.random2D();
+        console.log("Random vector:", randomVector.x, randomVector.y);
     this.maxSpeed = baseMaxSpeed + processing.random(-maxSpeedVariation, maxSpeedVariation);
     this.maxSpeed = Math.max(0, this.maxSpeed);
+        console.log("maxSpeed", this.maxSpeed);
     this.velocity.mult(this.maxSpeed);
     this.gene = gene;
     this.alive = true;
@@ -70,8 +74,10 @@ var Cell = function(x, y, gene, mutationRate) {
     this.mutationRate = mutationRate;
 }
 
-Cell.prototype.update = function() {
+Cell.prototype.update = function(processing) {
+    console.log("Cell update called");
     if (this.alive) {
+           console.log("Cell is alive, position:", this.position.x, this.position.y); // Check position
         var distanceToMouse = processing.dist(this.position.x, this.position.y, mouseX, mouseY);
         var speedModifier = 1.0;
         if (distanceToMouse < slowDownRadius) {
@@ -90,7 +96,7 @@ Cell.prototype.update = function() {
     }
 }
 
-Cell.prototype.interact = function(other) {
+Cell.prototype.interact = function(other, processing) {
     if (this === other || !this.alive || !other.alive) return;
 
     var distance = PVector.dist(this.position, other.position);
@@ -107,7 +113,7 @@ Cell.prototype.interact = function(other) {
         other.gene = constrain(other.gene - geneChange, GENE_MIN, GENE_MAX);
 
         if (distance < (this.radius + other.radius) && Math.abs(this.gene - other.gene) < reproductionThreshold && this.energy > minEnergyForReproduction && other.energy > minEnergyForReproduction) {
-            this.reproduce(other);
+            this.reproduce(other, processing);
         }
 
         // Collision Response
@@ -131,7 +137,7 @@ Cell.prototype.interact = function(other) {
     }
 }
 
-Cell.prototype.reproduce = function(other) {
+Cell.prototype.reproduce = function(other, processing) {
     if (cells.length < UNIVERSE_SIZE * 4) {
         var energyCost = (minEnergyForReproduction / 2) + 1;
         this.energy -= energyCost;
@@ -139,7 +145,7 @@ Cell.prototype.reproduce = function(other) {
 
         var newGene = (this.gene + other.gene) / 2;
         if (processing.random(100) < this.mutationRate) {
-            newGene = this.mutateGene(newGene);
+            newGene = this.mutateGene(newGene, processing);
         }
 
         var newMutationRate = constrain(this.mutationRate + processing.random(-mutationRateRange, mutationRateRange), 0.5, 20);
@@ -147,11 +153,11 @@ Cell.prototype.reproduce = function(other) {
         var newPosition = PVector.add(this.position, other.position).div(2);
         newPosition.add(PVector.random2D().mult(this.radius));
 
-        cells.push(new Cell(processing.random(width), processing.random(height), parseInt(processing.random(GENE_MIN, GENE_MAX + 1)), initialMutationRate));
+        cells.push(new Cell(processing.random(width), processing.random(height), parseInt(processing.random(GENE_MIN, GENE_MAX + 1)), newMutationRate, processing));
     }
 }
 
-Cell.prototype.mutateGene = function() {
+Cell.prototype.mutateGene = function(gene, processing) {
     var mutationRoll = processing.random(1);
     var mutationAmount;
 
@@ -223,6 +229,7 @@ function setup(processing) {
 }
 
 function draw(processing) {
+    console.log("draw() called");
     BACKGROUND_COLOR = lerpColor(BACKGROUND_COLOR, targetBackgroundColor, colorTransitionSpeed);
     processing.background(BACKGROUND_COLOR);
 
@@ -243,7 +250,8 @@ function draw(processing) {
 
     for (var i = cells.length - 1; i >= 0; i--) {
         var cell = cells[i];
-        cell.update();
+              console.log("Updating cell at:", cell.position.x, cell.position.y);
+        cell.update(processing);
         cell.checkSurvival();
 
         var distanceToCell = processing.dist(mouseX, mouseY, cell.position.x, cell.position.y);
@@ -257,7 +265,7 @@ function draw(processing) {
         }
 
         for (var j = i - 1; j >= 0; j--) {
-            cell.interact(cells[j]);
+            cell.interact(cells[j], processing);
         }
 
         if (!cell.alive) {
