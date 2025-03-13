@@ -2,15 +2,28 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Simple Processing.js Test</title>
+  <title>Cellular Automata</title>
   <script src="https://cdn.jsdelivr.net/processing.js/1.4.8/processing.min.js"></script>
+  <style>
+    body { margin: 0; display: flex; justify-content: center; align-items: center; background-color: black; }
+    canvas { border: none; width: 560px; height: 340px; }
+  </style>
 </head>
 <body>
   <canvas id="mycanvas"></canvas>
-  <script type="text/processing" data-processing-target="mycanvas">
-    size(200, 200);
-    background(255, 0, 0); // Red
-    ellipse(100, 100, 50, 50); // Circle
+  <script src="rr2ll2ia3.js"></script>
+  <script>
+    var canvas = document.getElementById('mycanvas');
+    var processingInstance = new Processing(canvas, function(processing) {
+      processing.size(560, 340); //Set size here too
+      processing.importFunctions();
+      processing.noSmooth();
+
+      //Initialize the processing function
+      processing.draw = draw;
+      processing.setup = setup;
+      processing.mouseClicked = mouseClicked;
+    });
   </script>
 </body>
 </html>
