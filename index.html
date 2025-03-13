@@ -17,11 +17,12 @@
     var processingInstance = new Processing(canvas, function(processing) {
       processing.size(560, 340);
       processing.noSmooth();
-
-      // Initialize the processing function, and pass in the processing variable
-      processing.draw = function() { draw(processing) };
-      processing.setup = function() { setup(processing) };
-      processing.mouseClicked = function() { mouseClicked(processing) };
+      draw = processing.draw;
+      setup = processing.setup;
+      mouseClicked = processing.mouseClicked;
+      setup(processing);
+      draw(processing);
+      mouseClicked(processing);
     });
   </script>
 </body>
