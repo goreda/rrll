@@ -229,7 +229,7 @@ boolean hoveringCell = false; // Track if the mouse is hovering over anything in
 float fixedGapSize = 36; // The desired fixed gap size.  Adjust as needed
 
 void setup() {
-    size(1680/3, 1020/3); // siğ  fullScreen(P2D);
+    size(1680/3, 1020/3); // fit  fullScreen(P2D);
     
     frameRate(FRAME_RATE);
     smooth();
