@@ -70,7 +70,7 @@ class Cell {
 
     Cell(float x, float y, int gene, float mutationRate) {
         this.position = new PVector(x, y);
-        this.velocity = PVector.random2D();
+        this.velocity = random2DVec();
         // Calculate individual maxSpeed using random()
         this.maxSpeed = baseMaxSpeed + random(-maxSpeedVariation, maxSpeedVariation);
         // Ensure maxSpeed is not negative
@@ -92,7 +92,7 @@ class Cell {
                 speedModifier = speedReductionFactor; // Reduce speed
             }
 
-            velocity.add(PVector.random2D().mult(0.2f * speedModifier));
+            velocity.add(random2DVec().mult(0.2f * speedModifier));
             velocity.limit(this.maxSpeed * speedModifier); // Use individual maxSpeed
             position.add(velocity);
 
@@ -144,8 +144,8 @@ class Cell {
             otherVelocity.sub(PVector.mult(collisionNormal, 2 * otherDot));
             this.velocity.lerp(thisVelocity, 0.8f);
             other.velocity.lerp(otherVelocity, 0.8f);
-            this.velocity.add(PVector.random2D().mult(0.3f));
-            other.velocity.add(PVector.random2D().mult(0.3f));
+            this.velocity.add(random2DVec().mult(0.3f));
+            other.velocity.add(random2DVec().mult(0.3f));
         }
     }
 
@@ -163,7 +163,7 @@ class Cell {
             float newMutationRate = constrain(this.mutationRate + random(-mutationRateRange, mutationRateRange), 0.5f, 20);
 
             PVector newPosition = PVector.add(this.position, other.position).div(2);
-            newPosition.add(PVector.random2D().mult(this.radius));
+            newPosition.add(random2DVec().mult(this.radius));
 
             cells.add(new Cell(newPosition.x, newPosition.y, newGene, newMutationRate));
         }
@@ -215,6 +215,12 @@ class Cell {
 }
 
 ArrayList<Cell> cells;
+
+// Web compat: Processing.js static PVector.random2D() returns undefined without a target; build the vector directly (works in desktop Processing too)
+PVector random2DVec() {
+    float a = random(TWO_PI);
+    return new PVector(cos(a), sin(a));
+}
 
 // --- File Watching (Optional) ---
 long lastModifiedTime;
