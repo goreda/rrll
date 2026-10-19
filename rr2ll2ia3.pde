@@ -83,6 +83,12 @@ class Cell {
         this.mutationRate = mutationRate;
     }
 
+    // Web compat: Processing.js static PVector.random2D() has no no-arg form; member fn so the compiler resolves it inside the class
+    PVector random2DVec() {
+        float a = random(TWO_PI);
+        return new PVector(cos(a), sin(a));
+    }
+
     void update() {
         if (alive) {
             // Check if cell is near the mouse and reduce speed
@@ -216,11 +222,6 @@ class Cell {
 
 ArrayList<Cell> cells;
 
-// Web compat: Processing.js static PVector.random2D() returns undefined without a target; build the vector directly (works in desktop Processing too)
-PVector random2DVec() {
-    float a = random(TWO_PI);
-    return new PVector(cos(a), sin(a));
-}
 
 // --- File Watching (Optional) ---
 long lastModifiedTime;
