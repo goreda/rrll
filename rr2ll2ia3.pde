@@ -558,7 +558,7 @@ void displayMouseCoordinates() {
     fill(coordinateTextColor);
     textAlign(CENTER, TOP);
     // text(mouseX, 12, height / 2.02 - textAscent()); // Top
-    text(nf(mouseY, 0, 2), width / 2, 10);   // Bottom .  + textDescent()
+    text(""+mouseY, width / 2, 10);   // Bottom .  + textDescent()
 
     // Set the same color for both "Y" and "mouseY"
     fill(coordinateTextColor);
