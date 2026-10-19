@@ -29,7 +29,7 @@
   var canvas = document.getElementById('sketch');
   var configEl = document.getElementById('config');
 
-  fetch('rr2ll2ia3.pde').then(function (r) { return r.text(); }).then(function (code) {
+  fetch('rr2ll2ia3.pde?v=' + Date.now()).then(function (r) { return r.text(); }).then(function (code) {
     var w = Math.max(2, Math.round(window.innerWidth * SCALE));
     var h = Math.max(2, Math.round(window.innerHeight * SCALE));
     code = code.replace(/size\([^;]*\);/, 'size(' + w + ', ' + h + ');');
