@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CELLULAR AUTOMATA</title>
+<script>window.__errs=[];window.addEventListener("error",function(e){try{window.__errs.push(String((e.error&&e.error.stack)||e.message||e).slice(0,400))}catch(x){}});</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono&display=swap" rel="stylesheet">
 <style>
@@ -32,7 +33,7 @@
     var w = Math.max(2, Math.round(window.innerWidth * SCALE));
     var h = Math.max(2, Math.round(window.innerHeight * SCALE));
     code = code.replace(/size\([^;]*\);/, 'size(' + w + ', ' + h + ');');
-    var p = new Processing(canvas, code);
+    var p = new Processing(canvas, code); window.__p = p;
 
     // Processing.js reads raw event offsets; correct them for the CSS scale so
     // mouseX/mouseY stay true on the stretched canvas.
