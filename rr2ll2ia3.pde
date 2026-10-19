@@ -31,6 +31,13 @@ boolean autoRefresh = true;   // timed random refresh on/off
 boolean lockParams = false;   // when true, a refresh respawns cells but keeps the panel values
 void logNop(String s) { }
 
+// 2-decimal format with a leading zero (Processing.js nf(0,0,2) gives ".00")
+String fmt2(float v) {
+    int c = round(abs(v) * 100);
+    int ip = (int) floor(c / 100.0); int fp = c - ip * 100;
+    return ((v < 0 && c > 0) ? "-" : "") + ip + "." + (fp < 10 ? "0" : "") + fp;
+}
+
 // --- Bridge for the page's control panel (Processing.js does not expose sketch variables) ---
 void setParam(String k, float v) {
     if (k.equals("baseMutationRate")) baseMutationRate = v;
@@ -470,7 +477,7 @@ void drawAxisLines() {
   strokeWeight(1);
 
     // Calculate the width of the X coordinate string
-    String mouseXString = nf(mouseX, 0, 2);
+    String mouseXString = fmt2(mouseX);
     float mouseXWidth = textWidth(mouseXString);
     String dcc2 = "" + cells.size();
     float dcc = textWidth(dcc2);
@@ -564,7 +571,7 @@ void displayMouseCoordinates() {
     fill(coordinateTextColor);
     textAlign(RIGHT, CENTER);
     // text(mouseY, width - 12, height / 2.02 - textAscent());   // Top
-    text((nf(mouseX, 0, 2).startsWith(".") ? "0" : "") + nf(mouseX, 0, 2), width - 12, height / 2); // Bottom
+    text(fmt2(mouseX), width - 12, height / 2); // Bottom
 }
 
 void shiftColors() {
