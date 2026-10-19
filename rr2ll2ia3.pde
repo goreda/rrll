@@ -10,7 +10,7 @@ float CELL_RADIUS = 10;       // Initial value, will be randomized
 float minRadius = 2;           // Minimum cell radius
 float maxRadius;           // Maximum cell radius
 int BACKGROUND_COLOR;
-float FRAME_RATE = 12;
+float FRAME_RATE = 30;
 float baseMaxSpeed = 0.2f; // Base max speed
 float maxSpeedVariation = 5f; //  Variation in speed
 float energyConsumptionRate = 0.58f;
@@ -25,6 +25,56 @@ float metaballStrength = 0.02f;
 float foodDensity = 0.025f;
 float foodEnergyValue = 5.0f;
 ArrayList<PVector> foodParticles = new ArrayList<PVector>();
+
+// --- Control panel flags (set from the page) ---
+boolean autoRefresh = true;   // timed random refresh on/off
+boolean lockParams = false;   // when true, a refresh respawns cells but keeps the panel values
+void logNop(String s) { }
+
+// --- Bridge for the page's control panel (Processing.js does not expose sketch variables) ---
+void setParam(String k, float v) {
+    if (k.equals("baseMutationRate")) baseMutationRate = v;
+    else if (k.equals("mutationRateRange")) mutationRateRange = v;
+    else if (k.equals("interactionRadius")) interactionRadius = v;
+    else if (k.equals("CELL_RADIUS")) { CELL_RADIUS = v; for (Cell c : cells) c.radius = v; }
+    else if (k.equals("reproductionThreshold")) reproductionThreshold = v;
+    else if (k.equals("foodDensity")) foodDensity = v;
+    else if (k.equals("THRESHOLD")) THRESHOLD = v;
+    else if (k.equals("minRefreshInterval")) minRefreshInterval = v;
+    else if (k.equals("maxRefreshInterval")) maxRefreshInterval = v;
+    else if (k.equals("refreshInterval")) refreshInterval = v;
+    else if (k.equals("fps")) { FRAME_RATE = v; frameRate(v); }
+}
+float getParam(String k) {
+    if (k.equals("baseMutationRate")) return baseMutationRate;
+    if (k.equals("mutationRateRange")) return mutationRateRange;
+    if (k.equals("interactionRadius")) return interactionRadius;
+    if (k.equals("CELL_RADIUS")) return CELL_RADIUS;
+    if (k.equals("reproductionThreshold")) return reproductionThreshold;
+    if (k.equals("foodDensity")) return foodDensity;
+    if (k.equals("THRESHOLD")) return THRESHOLD;
+    if (k.equals("minRefreshInterval")) return minRefreshInterval;
+    if (k.equals("maxRefreshInterval")) return maxRefreshInterval;
+    if (k.equals("refreshInterval")) return refreshInterval;
+    if (k.equals("UNIVERSE_SIZE")) return UNIVERSE_SIZE;
+    if (k.equals("frameCount")) return frameCount;
+    return 0;
+}
+void setFlag(String k, boolean v) {
+    if (k.equals("autoRefresh")) { autoRefresh = v; lastRefreshTime = millis(); }
+    else if (k.equals("lockParams")) lockParams = v;
+}
+int cellCount() { return cells.size(); }
+
+// --- Render buffers (allocated once, zeroed while consumed) ---
+float[] fSum; float[] fR; float[] fG; float[] fB; int bufW = 0; int bufH = 0;
+void ensureBuffers() {
+    if (bufW != width || bufH != height || fSum == null) {
+        bufW = width; bufH = height;
+        fSum = new float[width * height]; fR = new float[width * height];
+        fG = new float[width * height]; fB = new float[width * height];
+    }
+}
 
 // --- Refresh Parameters ---
 float minRefreshInterval = 6; // seconds
@@ -137,8 +187,8 @@ class Cell {
             this.position.sub(PVector.mult(collisionNormal, separationAmount));
             other.position.add(PVector.mult(collisionNormal, separationAmount));
 
-            PVector thisVelocity = this.velocity.copy();
-            PVector otherVelocity = other.velocity.copy();
+            PVector thisVelocity = new PVector(this.velocity.x, this.velocity.y);
+            PVector otherVelocity = new PVector(other.velocity.x, other.velocity.y);
             float thisDot = thisVelocity.dot(collisionNormal);
             float otherDot = otherVelocity.dot(collisionNormal);
             thisVelocity.sub(PVector.mult(collisionNormal, 2 * thisDot));
@@ -193,7 +243,8 @@ class Cell {
         // Loneliness check
         int neighbors = 0;
         for (Cell other : cells) {
-            if (other != this && other.alive && PVector.dist(this.position, other.position) < interactionRadius) {
+            float ndx = this.position.x - other.position.x; float ndy = this.position.y - other.position.y;
+            if (other != this && other.alive && ndx * ndx + ndy * ndy < interactionRadius * interactionRadius) {
                 neighbors++;
             }
         }
@@ -206,12 +257,15 @@ class Cell {
     }
 
     void eatFood() {
+        float r2 = radius * radius;
+        float px = position.x; float py = position.y;
         for (int i = foodParticles.size() - 1; i >= 0; i--) {
             PVector food = foodParticles.get(i);
-            if (PVector.dist(position, food) < radius) {
+            float dx = px - food.x; float dy = py - food.y;
+            if (dx * dx + dy * dy < r2) {
                 energy += foodEnergyValue;
                 foodParticles.remove(i);
-            }     
+            }
         }
     }
 }
@@ -250,7 +304,7 @@ void setup() {
     lastRefreshTime = millis(); // Initialize lastRefreshTime
 
     //lastModifiedTime = new File(filePath).lastModified(); // This doesn't work in core Processing
-    println("File watching is not supported in core Processing.");
+    logNop("File watching is not supported in core Processing.");
 
     // Load a monospaced font
     monoFont = createFont("Monospaced", 16); // Or "Monospaced", "Consolas", etc.
@@ -268,11 +322,13 @@ void randomizeSimulation() {
     foodParticles.clear();
 
     // Randomize parameters
-    UNIVERSE_SIZE = (int) random(2, random(2, 100));  // Vary the initial population size
-    baseMutationRate = random(2, 8);
-    mutationRateRange = random(1, 4);
-    interactionRadius = random(10, 30);
-    CELL_RADIUS = random(minRadius, maxRadius); // Randomize initial cell radius
+    if (!lockParams) {
+        UNIVERSE_SIZE = (int) random(2, random(2, 100));  // Vary the initial population size
+        baseMutationRate = random(2, 8);
+        mutationRateRange = random(1, 4);
+        interactionRadius = random(10, 30);
+        CELL_RADIUS = random(minRadius, maxRadius); // Randomize initial cell radius
+    }
     // Optionally randomize other parameters like energyConsumptionRate, etc.
 
     // Re-initialize cells with new parameters
@@ -289,13 +345,13 @@ void randomizeSimulation() {
 
 void setNewRefreshInterval() {
     refreshInterval = random(minRefreshInterval, maxRefreshInterval);
-    println("Next refresh in " + refreshInterval + " seconds.");
+    logNop("Next refresh in " + refreshInterval + " seconds.");
 }
 
 void draw() {
     /*long currentModifiedTime = new File(filePath).lastModified(); // This doesn't work in core Processing
     if (currentModifiedTime > lastModifiedTime) {
-        println("File has changed. Restart is highly recommended.");
+        logNop("File has changed. Restart is highly recommended.");
         lastModifiedTime = currentModifiedTime;
     }*/
 
@@ -309,13 +365,7 @@ void draw() {
         foodParticles.add(new PVector(random(width), random(height)));
     }
 
-    stroke(200, 100, 0);
-    strokeWeight(1);
-    for (PVector food : foodParticles) {
-        point(food.x, food.y);
-    }
-    strokeWeight(12);
-    noStroke();
+    noStroke(); // food is simulated but no longer drawn (it showed up as stray 1px dots)
 
     // Update, Interact and Clean up Cells
     hoveringCell = false; // Reset hovering state at the beginning of each frame
@@ -345,75 +395,55 @@ void draw() {
         }
     }
 
-    // --- Metaball Rendering ---
+    // --- Metaball Rendering (bounding-box accumulation, no per-pixel x per-cell scan) ---
+    ensureBuffers();
     loadPixels();
-    // Web perf: snapshot live cells into plain arrays once per frame
-    int nLive = 0;
-    for (Cell cell : cells) { if (cell.alive) nLive++; }
-    float[] cellX = new float[nLive];
-    float[] cellY = new float[nLive];
-    float[] cellR2 = new float[nLive];
-    float[] cellCut = new float[nLive];
-    int[] cellGene = new int[nLive];
-    int ci = 0;
+    int W = width; int H = height;
     for (Cell cell : cells) {
         if (!cell.alive) continue;
-        cellX[ci] = cell.position.x;
-        cellY[ci] = cell.position.y;
-        cellR2[ci] = cell.radius * cell.radius;
-        cellCut[ci] = 64 * cellR2[ci];
-        cellGene[ci] = cell.gene;
-        ci++;
-    }
-    for (int x = 0; x < width; x++) {
-        for (int y = 0; y < height; y++) {
-            float sum = 0;
-            float red = 0;
-            float green = 0;
-            float blue = 0;
-
-            for (int k = 0; k < ci; k++) {
-                // Web perf: inline squared distance + cutoff (influence is negligible past 8*radius)
-                float dx = x - cellX[k];
-                float dy = y - cellY[k];
-                float d2 = dx * dx + dy * dy;
-                if (d2 > cellCut[k]) continue;
-                float influence = metaballStrength * cellR2[k] / (d2 + 0.0001f);
-                sum += influence;
-
-                // Sharpen the influence based on distance.  Key change!
-                influence = pow(influence, 2); // Square the influence.  Experiment with this power.
-
-                if (cellGene[k] > 2) { // Dominant
-                    red += influence;
-                } else if (cellGene[k] < -2) { // Recessive
-                    green += influence;
-                } else { // Neutral
-                    blue += influence;
-                }
-            }
-
-            if (sum > THRESHOLD) {
-                // Normalize the color components (important for correct mixing)
-                float totalColor = red + green + blue;
-                if (totalColor > 0) {
-                    red /= totalColor;
-                    green /= totalColor;
-                    blue /= totalColor;
-                }
-
-                // Create the color.  No change here.
-                pixels[x + y * width] = color(red * 255, green * 255, blue * 255);
-            } else {
-                pixels[x + y * width] = BACKGROUND_COLOR;
+        float cx = cell.position.x; float cy = cell.position.y;
+        float r2 = cell.radius * cell.radius;
+        float reach = 4 * cell.radius;
+        float cut = 16 * r2;
+        int x0 = max(0, (int) floor(cx - reach)); int x1 = min(W - 1, (int) ceil(cx + reach));
+        int y0 = max(0, (int) floor(cy - reach)); int y1 = min(H - 1, (int) ceil(cy + reach));
+        int g = cell.gene;
+        float[] ch = (g > 2) ? fR : ((g < -2) ? fG : fB);
+        float k = metaballStrength * r2;
+        for (int y = y0; y <= y1; y++) {
+            float dy = y - cy; float dy2 = dy * dy; int row = y * W;
+            for (int x = x0; x <= x1; x++) {
+                float dx = x - cx;
+                float d2 = dx * dx + dy2;
+                if (d2 > cut) continue;
+                float influence = k / (d2 + 0.0001f);
+                int idx = row + x;
+                fSum[idx] += influence;
+                ch[idx] += influence * influence;
             }
         }
     }
+    int total = W * H;
+    int bgc = BACKGROUND_COLOR;
+    for (int i = 0; i < total; i++) {
+        float sum = fSum[i];
+        if (sum > THRESHOLD) {
+            float rr = fR[i]; float gg = fG[i]; float bb = fB[i];
+            float t = rr + gg + bb;
+            if (t > 0) { rr /= t; gg /= t; bb /= t; }
+            pixels[i] = (255 << 24) | (((int)(rr * 255)) << 16) | (((int)(gg * 255)) << 8) | ((int)(bb * 255));
+        } else {
+            pixels[i] = bgc;
+        }
+        if (sum != 0) { fSum[i] = 0; fR[i] = 0; fG[i] = 0; fB[i] = 0; }
+    }
+    // axis lines inverted straight in the same pixel buffer (one upload per frame)
+    drawAxisLines();
     updatePixels();
 
     // --- Timed Random Refresh ---
-    if (millis() - lastRefreshTime > refreshInterval * 1000) {
-        println("Random refresh!");
+    if (autoRefresh && millis() - lastRefreshTime > refreshInterval * 1000) {
+        logNop("Random refresh!");
         randomizeSimulation();
         setNewRefreshInterval();  // Set a new random interval
         lastRefreshTime = millis(); // Update the last refresh time
@@ -440,7 +470,7 @@ void drawAxisLines() {
   strokeWeight(1);
 
     // Calculate the width of the X coordinate string
-    String mouseXString = "" + mouseX;
+    String mouseXString = nf(mouseX, 0, 2);
     float mouseXWidth = textWidth(mouseXString);
     String dcc2 = "" + cells.size();
     float dcc = textWidth(dcc2);
@@ -450,7 +480,6 @@ void drawAxisLines() {
     float dynamicGapLeft = max(fixedGapSize, dcc + 20);   // Right side uses the fixed gap.
 
   // Web perf: invert only the two 1px axis lines directly (was a full-canvas PGraphics scan)
-  loadPixels();
   int hy = height / 2;
   for (int x = (int) dynamicGapLeft; x <= width - (int) dynamicGapRight; x++) {
       invertPixel(x, hy);
@@ -459,7 +488,6 @@ void drawAxisLines() {
   for (int y = (int) fixedGapSize; y <= height - (int) fixedGapSize; y++) {
       invertPixel(vx, y);
   }
-  updatePixels();
 }
 
 void invertPixel(int x, int y) {
@@ -530,13 +558,13 @@ void displayMouseCoordinates() {
     fill(coordinateTextColor);
     textAlign(CENTER, TOP);
     // text(mouseX, 12, height / 2.02 - textAscent()); // Top
-    text(""+mouseY, width / 2, 10);   // Bottom .  + textDescent()
+    text(nf(mouseY, 0, 2), width / 2, 10);   // Bottom .  + textDescent()
 
     // Set the same color for both "Y" and "mouseY"
     fill(coordinateTextColor);
     textAlign(RIGHT, CENTER);
     // text(mouseY, width - 12, height / 2.02 - textAscent());   // Top
-    text(mouseX+"", width - 12, height / 2); // Bottom
+    text(nf(mouseX, 0, 2), width - 12, height / 2); // Bottom
 }
 
 void shiftColors() {
@@ -546,7 +574,7 @@ void shiftColors() {
     targetGreenColor = targetBlueColor;
     targetBlueColor = tempRed;
 
-    println("Cell colors shifting.");
+    logNop("Cell colors shifting.");
 }
 
 void randomizeColors() {
@@ -554,7 +582,7 @@ void randomizeColors() {
     targetRedColor = color(random(255), random(255), random(255));
     targetGreenColor = color(random(255), random(255), random(255));
     targetBlueColor = color(random(255), random(255), random(255));
-    println("Randomized cell colors.");
+    logNop("Randomized cell colors.");
 }
 
 void mouseClicked() {
@@ -594,18 +622,18 @@ void mouseClicked() {
 void createNewCell() {
     float initialMutationRate = baseMutationRate + random(-mutationRateRange, mutationRateRange);
     cells.add(new Cell(mouseX, mouseY, (int)random(GENE_MIN, GENE_MAX + 1), initialMutationRate));
-    println("New cell created at mouse position.");
+    logNop("New cell created at mouse position.");
 }
 
 void changeRefreshInterval() {
     setNewRefreshInterval(); // Sets a new random refresh interval
     lastRefreshTime = millis();  //Resets the timer
-    println("Refresh interval changed by click.");
+    logNop("Refresh interval changed by click.");
 }
 
 void changeInteractionRadius() {
     interactionRadius = random(10, 50); // Or any desired range
-    println("Interaction radius changed to: " + interactionRadius);
+    logNop("Interaction radius changed to: " + interactionRadius);
 }
 
 void randomizeSingleParameter() {
@@ -614,23 +642,23 @@ void randomizeSingleParameter() {
     switch (parameterToChange) {
         case 0:
             baseMutationRate = random(2, 8);
-            println("Base Mutation Rate changed to: " + baseMutationRate);
+            logNop("Base Mutation Rate changed to: " + baseMutationRate);
             break;
         case 1:
             mutationRateRange = random(1, 4);
-            println("Mutation Rate Range changed to: " + mutationRateRange);
+            logNop("Mutation Rate Range changed to: " + mutationRateRange);
             break;
         case 2:
             CELL_RADIUS = random(minRadius, maxRadius);
-            println("Cell Radius changed to: " + CELL_RADIUS);
+            logNop("Cell Radius changed to: " + CELL_RADIUS);
             break;
         case 3:
             baseMaxSpeed = random(1, 2);
-             println("Base Max Speed changed to: " + baseMaxSpeed);
+             logNop("Base Max Speed changed to: " + baseMaxSpeed);
             break;
         case 4:
              foodDensity = random(0.01f, 0.05f);
-             println("Food Density changed to: " + foodDensity);
+             logNop("Food Density changed to: " + foodDensity);
              break;
     }
 }
@@ -643,7 +671,7 @@ void killCellsNearMouse() {
             cells.remove(i);
         }
     }
-    println("Killed cells near the mouse.");
+    logNop("Killed cells near the mouse.");
 }
 
 void cycleBackgroundColor() {
@@ -679,7 +707,7 @@ int getInvertedColorArea(int x, int y) {
 
             // Check if the sample coordinates are within the screen bounds
             if (sampleX >= 0 && sampleX < width && sampleY >= 0 && sampleY < height) {
-                int currentColor = get(sampleX, sampleY);
+                int currentColor = pxAt(sampleX, sampleY);
                 sumRed += red(currentColor);
                 sumGreen += green(currentColor);
                 sumBlue += blue(currentColor);
@@ -696,8 +724,14 @@ int getInvertedColorArea(int x, int y) {
     return color(avgRed, avgGreen, avgBlue);
 }
 
-int getInvertedColor(int x, int y) {
-    int currentColor = get(x, y); // Get the color at the mouse position
+int pxAt(int x, int y) {
+    if (x < 0 || y < 0 || x >= width || y >= height) return color(255);
+    return pixels[x + y * width];
+}
+
+int getInvertedColor(float fx, float fy) {
+    int x = (int) fx; int y = (int) fy;
+    int currentColor = pxAt(x, y); // Get the color at the mouse position
     return color(255 - red(currentColor), 255 - green(currentColor), 255 - blue(currentColor)); // Invert the color
 }
 

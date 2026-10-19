@@ -10,24 +10,38 @@
 <style>
   html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #ffffff; }
   canvas { display: block; width: 100vw; height: 100vh; }
-  #config {
-    position: fixed; top: 10px; right: 12px;
-    font-family: 'Fragment Mono', monospace; font-size: 11px; line-height: 1.6;
-    color: #111; text-align: right; white-space: pre;
-    background: transparent; pointer-events: none; user-select: none;
-    text-shadow: 0 0 4px rgba(255,255,255,.8);
+  #edge { position: fixed; top: 0; right: 0; width: 16px; height: 100%; z-index: 9; }
+  #edge::after { content: ''; position: absolute; right: 3px; top: 50%; width: 3px; height: 44px; margin-top: -22px; border-radius: 2px; background: rgba(0,0,0,.18); transition: opacity .2s; }
+  #panel {
+    position: fixed; top: 0; right: 0; height: 100%; width: 250px; z-index: 10; box-sizing: border-box;
+    padding: 14px 16px; overflow-y: auto;
+    font-family: 'Fragment Mono', monospace; font-size: 11px; line-height: 1.5; color: #111;
+    background: rgba(255,255,255,.93); border-left: 1px solid #111;
+    transform: translateX(100%); transition: transform .18s ease-out; will-change: transform;
   }
+  #edge:hover + #panel, #panel:hover, #panel.open { transform: translateX(0); }
+  #edge:hover::after, #panel:hover ~ #edge::after { opacity: 0; }
+  #panel h4 { margin: 0 0 6px; font-size: 11px; letter-spacing: .08em; }
+  #stats { white-space: pre; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #ccc; }
+  .row { margin: 7px 0; }
+  .row label { display: flex; justify-content: space-between; }
+  .row input[type=range] { width: 100%; margin: 2px 0 0; }
+  .chk { display: flex; align-items: center; gap: 6px; margin: 7px 0; cursor: pointer; }
+  #panel button { font: inherit; border: 1px solid #111; background: #fff; padding: 3px 8px; margin: 6px 6px 0 0; cursor: pointer; }
+  #panel button:hover { background: #111; color: #fff; }
 </style>
 </head>
 <body>
 <canvas id="sketch"></canvas>
-<div id="config"></div>
+<div id="edge"></div>
+<div id="panel"><h4>CONFIG</h4><div id="stats"></div><div id="controls"></div></div>
 <script src="processing.min.js"></script>
 <script>
 (function () {
   var SCALE = 1.0; // internal render scale: page is filled via CSS, sim cost stays low
   var canvas = document.getElementById('sketch');
-  var configEl = document.getElementById('config');
+  var statsEl = document.getElementById('stats');
+  var controlsEl = document.getElementById('controls');
 
   fetch('rr2ll2ia3.pde?v=' + Date.now()).then(function (r) { return r.text(); }).then(function (code) {
     var w = Math.max(2, Math.round(window.innerWidth * SCALE));
@@ -55,25 +69,70 @@
     var lastFC = 0, lastT = Date.now(), fps = 0;
     setInterval(function () {
       try {
-        var now = Date.now(), fc = p.frameCount;
+        var now = Date.now(), fc = p.getParam('frameCount');
         fps = 1000 * (fc - lastFC) / Math.max(1, now - lastT);
         lastFC = fc; lastT = now;
       } catch (e) {}
     }, 1000);
+    var PARAMS = [
+      ['baseMutationRate', 'mutation', 0.5, 20, 0.5],
+      ['mutationRateRange', 'mutation range', 0.5, 8, 0.5],
+      ['interactionRadius', 'interaction_r', 5, 80, 1],
+      ['CELL_RADIUS', 'cell_r', 2, 60, 1],
+      ['reproductionThreshold', 'repro_thr', 1, 20, 1],
+      ['foodDensity', 'food', 0, 0.1, 0.005],
+      ['THRESHOLD', 'metaball thr', 0.05, 0.6, 0.01],
+      ['minRefreshInterval', 'refresh min s', 2, 60, 1],
+      ['maxRefreshInterval', 'refresh max s', 3, 90, 1]
+    ];
+    var rows = {};
+    function addRange(key, label, min, max, step, fn) {
+      var d = document.createElement('div'); d.className = 'row';
+      d.innerHTML = '<label><span>' + label + '</span><b></b></label><input type="range" min="' + min + '" max="' + max + '" step="' + step + '">';
+      var inp = d.querySelector('input'), val = d.querySelector('b');
+      inp.addEventListener('input', function () { var v = parseFloat(inp.value); val.textContent = v; fn(v); });
+      controlsEl.appendChild(d); rows[key] = { inp: inp, val: val, step: step };
+    }
+    function addCheck(label, init, fn) {
+      var d = document.createElement('label'); d.className = 'chk';
+      d.innerHTML = '<input type="checkbox"' + (init ? ' checked' : '') + '><span>' + label + '</span>';
+      var c = d.querySelector('input'); c.addEventListener('change', function () { fn(c.checked); });
+      controlsEl.appendChild(d); return c;
+    }
+    function addButton(label, fn) {
+      var b = document.createElement('button'); b.textContent = label; b.addEventListener('click', fn); controlsEl.appendChild(b);
+    }
+    var lockBox;
+    PARAMS.forEach(function (q) {
+      addRange(q[0], q[1], q[2], q[3], q[4], function (v) {
+        p.setParam(q[0], v); p.setFlag('lockParams', true); if (lockBox) lockBox.checked = true;
+        if (q[0] === 'CELL_RADIUS') { /* applies to new cells */ }
+      });
+    });
+    addRange('fps', 'target fps', 5, 60, 1, function (v) { p.setParam('fps', v); });
+    lockBox = addCheck('lock values on refresh', false, function (c) { p.setFlag('lockParams', c); });
+    addCheck('auto refresh', true, function (c) { p.setFlag('autoRefresh', c); });
+    addButton('respawn now', function () { p.randomizeSimulation(); });
+    addButton('randomize all', function () { p.setFlag('lockParams', false); if (lockBox) lockBox.checked = false; p.randomizeSimulation(); });
+    var panel = document.getElementById('panel');
+    function syncRows() {
+      if (panel.matches(':hover')) return; // do not fight the user's drag
+      PARAMS.forEach(function (q) {
+        var r = rows[q[0]], v = p.getParam(q[0]);
+        if (typeof v === 'number') { r.inp.value = v; r.val.textContent = Math.round(v * 1000) / 1000; }
+      });
+      rows.fps.inp.value = Math.round(fps); rows.fps.val.textContent = Math.round(fps) + ' (now)';
+    }
     setInterval(function () {
       try {
-        configEl.textContent =
-          'UNIVERSE_SIZE ' + p.UNIVERSE_SIZE + '\n' +
-          'cells ' + p.cells.size() + '\n' +
-          'mutation ' + n(p.baseMutationRate, 1) + ' ± ' + n(p.mutationRateRange, 1) + '\n' +
-          'interaction_r ' + n(p.interactionRadius, 1) + '\n' +
-          'cell_r ' + n(p.CELL_RADIUS, 1) + '\n' +
-          'repro_thr ' + n(p.reproductionThreshold, 1) + '\n' +
-          'food ' + n(p.foodDensity, 3) + '\n' +
-          'refresh ' + n(p.refreshInterval, 1) + 's\n' +
+        statsEl.textContent =
+          'UNIVERSE_SIZE ' + p.getParam('UNIVERSE_SIZE') + '\n' +
+          'cells ' + p.cellCount() + '\n' +
+          'refresh ' + n(p.getParam('refreshInterval'), 1) + 's\n' +
           'fps ' + n(fps, 1);
+        syncRows();
       } catch (e) { /* sketch not ready yet */ }
-    }, 300);
+    }, 400);
   });
 })();
 </script>
