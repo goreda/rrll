@@ -564,7 +564,7 @@ void displayMouseCoordinates() {
     fill(coordinateTextColor);
     textAlign(RIGHT, CENTER);
     // text(mouseY, width - 12, height / 2.02 - textAscent());   // Top
-    text(nf(mouseX, 0, 2), width - 12, height / 2); // Bottom
+    text((nf(mouseX, 0, 2).startsWith(".") ? "0" : "") + nf(mouseX, 0, 2), width - 12, height / 2); // Bottom
 }
 
 void shiftColors() {
