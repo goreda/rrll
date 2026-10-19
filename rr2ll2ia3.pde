@@ -70,7 +70,7 @@ class Cell {
 
     Cell(float x, float y, int gene, float mutationRate) {
         this.position = new PVector(x, y);
-        this.velocity = random2DVec();
+        this.velocity = (new PVector(cos(random(TWO_PI)), sin(random(TWO_PI))));
         // Calculate individual maxSpeed using random()
         this.maxSpeed = baseMaxSpeed + random(-maxSpeedVariation, maxSpeedVariation);
         // Ensure maxSpeed is not negative
@@ -83,12 +83,6 @@ class Cell {
         this.mutationRate = mutationRate;
     }
 
-    // Web compat: Processing.js static PVector.random2D() has no no-arg form; member fn so the compiler resolves it inside the class
-    PVector random2DVec() {
-        float a = random(TWO_PI);
-        return new PVector(cos(a), sin(a));
-    }
-
     void update() {
         if (alive) {
             // Check if cell is near the mouse and reduce speed
@@ -98,7 +92,7 @@ class Cell {
                 speedModifier = speedReductionFactor; // Reduce speed
             }
 
-            velocity.add(random2DVec().mult(0.2f * speedModifier));
+            velocity.add((new PVector(cos(random(TWO_PI)), sin(random(TWO_PI)))).mult(0.2f * speedModifier));
             velocity.limit(this.maxSpeed * speedModifier); // Use individual maxSpeed
             position.add(velocity);
 
@@ -150,8 +144,8 @@ class Cell {
             otherVelocity.sub(PVector.mult(collisionNormal, 2 * otherDot));
             this.velocity.lerp(thisVelocity, 0.8f);
             other.velocity.lerp(otherVelocity, 0.8f);
-            this.velocity.add(random2DVec().mult(0.3f));
-            other.velocity.add(random2DVec().mult(0.3f));
+            this.velocity.add((new PVector(cos(random(TWO_PI)), sin(random(TWO_PI)))).mult(0.3f));
+            other.velocity.add((new PVector(cos(random(TWO_PI)), sin(random(TWO_PI)))).mult(0.3f));
         }
     }
 
@@ -169,7 +163,7 @@ class Cell {
             float newMutationRate = constrain(this.mutationRate + random(-mutationRateRange, mutationRateRange), 0.5f, 20);
 
             PVector newPosition = PVector.add(this.position, other.position).div(2);
-            newPosition.add(random2DVec().mult(this.radius));
+            newPosition.add((new PVector(cos(random(TWO_PI)), sin(random(TWO_PI)))).mult(this.radius));
 
             cells.add(new Cell(newPosition.x, newPosition.y, newGene, newMutationRate));
         }
