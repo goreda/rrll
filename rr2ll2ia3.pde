@@ -353,8 +353,13 @@ void draw() {
 
             for (Cell cell : cells) {
                 if (!cell.alive) continue;
-                float d = dist(x, y, cell.position.x, cell.position.y);
-                float influence = metaballStrength * (cell.radius * cell.radius) / (d * d + 0.0001f);
+                // Web perf: inline squared distance + cutoff (influence is negligible past 8*radius)
+                float dx = x - cell.position.x;
+                float dy = y - cell.position.y;
+                float d2 = dx * dx + dy * dy;
+                float r = cell.radius;
+                if (d2 > 64 * r * r) continue;
+                float influence = metaballStrength * (r * r) / (d2 + 0.0001f);
                 sum += influence;
 
                 // Sharpen the influence based on distance.  Key change!
