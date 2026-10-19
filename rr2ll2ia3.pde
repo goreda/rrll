@@ -344,6 +344,24 @@ void draw() {
 
     // --- Metaball Rendering ---
     loadPixels();
+    // Web perf: snapshot live cells into plain arrays once per frame
+    int nLive = 0;
+    for (Cell cell : cells) { if (cell.alive) nLive++; }
+    float[] cellX = new float[nLive];
+    float[] cellY = new float[nLive];
+    float[] cellR2 = new float[nLive];
+    float[] cellCut = new float[nLive];
+    int[] cellGene = new int[nLive];
+    int ci = 0;
+    for (Cell cell : cells) {
+        if (!cell.alive) continue;
+        cellX[ci] = cell.position.x;
+        cellY[ci] = cell.position.y;
+        cellR2[ci] = cell.radius * cell.radius;
+        cellCut[ci] = 64 * cellR2[ci];
+        cellGene[ci] = cell.gene;
+        ci++;
+    }
     for (int x = 0; x < width; x++) {
         for (int y = 0; y < height; y++) {
             float sum = 0;
@@ -351,23 +369,21 @@ void draw() {
             float green = 0;
             float blue = 0;
 
-            for (Cell cell : cells) {
-                if (!cell.alive) continue;
+            for (int k = 0; k < ci; k++) {
                 // Web perf: inline squared distance + cutoff (influence is negligible past 8*radius)
-                float dx = x - cell.position.x;
-                float dy = y - cell.position.y;
+                float dx = x - cellX[k];
+                float dy = y - cellY[k];
                 float d2 = dx * dx + dy * dy;
-                float r = cell.radius;
-                if (d2 > 64 * r * r) continue;
-                float influence = metaballStrength * (r * r) / (d2 + 0.0001f);
+                if (d2 > cellCut[k]) continue;
+                float influence = metaballStrength * cellR2[k] / (d2 + 0.0001f);
                 sum += influence;
 
                 // Sharpen the influence based on distance.  Key change!
                 influence = pow(influence, 2); // Square the influence.  Experiment with this power.
 
-                if (cell.gene > 2) { // Dominant
+                if (cellGene[k] > 2) { // Dominant
                     red += influence;
-                } else if (cell.gene < -2) { // Recessive
+                } else if (cellGene[k] < -2) { // Recessive
                     green += influence;
                 } else { // Neutral
                     blue += influence;
@@ -429,34 +445,25 @@ void drawAxisLines() {
     // Calculate the new dynamic gaps
     float dynamicGapRight = max(fixedGapSize, mouseXWidth + 20);  // Gap for the left side
     float dynamicGapLeft = max(fixedGapSize, dcc + 20);   // Right side uses the fixed gap.
-    float dynamicGapX = dynamicGapRight; // Use the left gap for x axis calculation
 
-  
-  // Create a temporary PGraphics to draw the lines and then invert the area
-  PGraphics axisLines = createGraphics(width, height);
-  axisLines.beginDraw();
-  axisLines.stroke(0,0);  // Initial line color (doesn't matter, gets inverted)
-  axisLines.line(dynamicGapLeft, axisLines.height / 2, axisLines.width - dynamicGapRight, axisLines.height / 2); // X axis
-  axisLines.line(axisLines.width / 2, fixedGapSize, axisLines.width / 2, axisLines.height - fixedGapSize); // Y axis - FIXED
-
-  axisLines.endDraw();
-  axisLines.noFill();
-
-  // Invert the colors in the area where the lines are drawn on PGraphics
-  for (int x = 0; x < axisLines.width; x++) {
-    for (int y = 0; y < axisLines.height; y++) {
-      // Check if within gap range and line vicinity
-      if (
-        (y >= axisLines.height / 2 - 0.4 && y <= axisLines.height / 2 && x >= dynamicGapLeft && x <= axisLines.width - dynamicGapRight ) ||
-        (x >= axisLines.width / 2 - 0.4 && x <= axisLines.width / 2 && y >= fixedGapSize && y <= axisLines.height - fixedGapSize)
-      ){
-      int currentColor = getInvertedColorArea(x, y);
-          set(x, y, currentColor);
-      }
-    }
+  // Web perf: invert only the two 1px axis lines directly (was a full-canvas PGraphics scan)
+  loadPixels();
+  int hy = height / 2;
+  for (int x = (int) dynamicGapLeft; x <= width - (int) dynamicGapRight; x++) {
+      invertPixel(x, hy);
   }
+  int vx = width / 2;
+  for (int y = (int) fixedGapSize; y <= height - (int) fixedGapSize; y++) {
+      invertPixel(vx, y);
+  }
+  updatePixels();
+}
 
-  image(axisLines,0,0); // Draw the axis lines
+void invertPixel(int x, int y) {
+    if (x < 0 || y < 0 || x >= width || y >= height) return;
+    int i = x + y * width;
+    int c = pixels[i];
+    pixels[i] = color(255 - red(c), 255 - green(c), 255 - blue(c));
 }
 
 // Count TOTAL cells
