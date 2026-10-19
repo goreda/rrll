@@ -92,7 +92,7 @@ class Cell {
                 speedModifier = speedReductionFactor; // Reduce speed
             }
 
-            velocity.add((new PVector(cos(random(TWO_PI)), sin(random(TWO_PI)))).mult(0.2f * speedModifier));
+            velocity.add(PVector.mult((new PVector(cos(random(TWO_PI)), sin(random(TWO_PI)))), 0.2f * speedModifier));
             velocity.limit(this.maxSpeed * speedModifier); // Use individual maxSpeed
             position.add(velocity);
 
@@ -129,7 +129,8 @@ class Cell {
             }
 
             // Collision Response
-            PVector collisionNormal = PVector.sub(other.position, this.position).normalize();
+            PVector collisionNormal = PVector.sub(other.position, this.position);
+            collisionNormal.normalize();
             float overlap = (this.radius + other.radius) - distance;
             float separationAmount = overlap * 0.5f;
 
@@ -144,8 +145,8 @@ class Cell {
             otherVelocity.sub(PVector.mult(collisionNormal, 2 * otherDot));
             this.velocity.lerp(thisVelocity, 0.8f);
             other.velocity.lerp(otherVelocity, 0.8f);
-            this.velocity.add((new PVector(cos(random(TWO_PI)), sin(random(TWO_PI)))).mult(0.3f));
-            other.velocity.add((new PVector(cos(random(TWO_PI)), sin(random(TWO_PI)))).mult(0.3f));
+            this.velocity.add(PVector.mult((new PVector(cos(random(TWO_PI)), sin(random(TWO_PI)))), 0.3f));
+            other.velocity.add(PVector.mult((new PVector(cos(random(TWO_PI)), sin(random(TWO_PI)))), 0.3f));
         }
     }
 
@@ -162,8 +163,9 @@ class Cell {
 
             float newMutationRate = constrain(this.mutationRate + random(-mutationRateRange, mutationRateRange), 0.5f, 20);
 
-            PVector newPosition = PVector.add(this.position, other.position).div(2);
-            newPosition.add((new PVector(cos(random(TWO_PI)), sin(random(TWO_PI)))).mult(this.radius));
+            PVector newPosition = PVector.add(this.position, other.position);
+            newPosition.div(2);
+            newPosition.add(PVector.mult((new PVector(cos(random(TWO_PI)), sin(random(TWO_PI)))), this.radius));
 
             cells.add(new Cell(newPosition.x, newPosition.y, newGene, newMutationRate));
         }
