@@ -444,6 +444,7 @@ void draw() {
         }
         if (sum != 0) { fSum[i] = 0; fR[i] = 0; fG[i] = 0; fB[i] = 0; }
     }
+    takeSnapshot();
     // axis lines inverted straight in the same pixel buffer (one upload per frame)
     drawAxisLines();
     updatePixels();
@@ -731,9 +732,25 @@ int getInvertedColorArea(int x, int y) {
     return color(avgRed, avgGreen, avgBlue);
 }
 
+// Snapshot of the rendered pixels around the mouse, taken before updatePixels
+// (the pixels[] array is not reliable to read after the upload in Processing.js).
+int[] snapPx; int snapX0 = 0; int snapY0 = 0; int snapW = 0; int snapH = 0;
+void takeSnapshot() {
+    int rad = hoveringCell ? ((int) CELL_RADIUS + 3) : 2;
+    int mx = (int) mouseX; int my = (int) mouseY;
+    snapX0 = mx - rad; snapY0 = my - rad; snapW = 2 * rad + 1; snapH = 2 * rad + 1;
+    if (snapPx == null || snapPx.length < snapW * snapH) snapPx = new int[snapW * snapH];
+    for (int yy = 0; yy < snapH; yy++) {
+        for (int xx = 0; xx < snapW; xx++) {
+            int px = snapX0 + xx; int py = snapY0 + yy;
+            snapPx[xx + yy * snapW] = (px < 0 || py < 0 || px >= width || py >= height) ? color(255) : pixels[px + py * width];
+        }
+    }
+}
 int pxAt(int x, int y) {
-    if (x < 0 || y < 0 || x >= width || y >= height) return color(255);
-    return pixels[x + y * width];
+    int xx = x - snapX0; int yy = y - snapY0;
+    if (xx < 0 || yy < 0 || xx >= snapW || yy >= snapH) return color(255);
+    return snapPx[xx + yy * snapW];
 }
 
 int getInvertedColor(float fx, float fy) {
