@@ -22,7 +22,7 @@
 <body>
 <canvas id="sketch"></canvas>
 <div id="config"></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/processing.js/1.4.8/processing.min.js"></script>
+<script src="processing.min.js"></script>
 <script>
 (function () {
   var SCALE = 1.0; // internal render scale: page is filled via CSS, sim cost stays low
@@ -34,6 +34,11 @@
     var h = Math.max(2, Math.round(window.innerHeight * SCALE));
     code = code.replace(/size\([^;]*\);/, 'size(' + w + ', ' + h + ');');
     var p = new Processing(canvas, code); window.__p = p;
+    // keep the loop alive and log real stacks if a frame throws
+    setTimeout(function(){ try {
+      var od = p.draw.bind(p);
+      p.draw = function(){ try { od(); } catch(e){ window.__errs.push(String((e&&e.stack)||e).slice(0,300)); } };
+    } catch(e){} }, 800);
 
     // Processing.js reads raw event offsets; correct them for the CSS scale so
     // mouseX/mouseY stay true on the stretched canvas.
