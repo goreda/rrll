@@ -25,7 +25,8 @@ Static files, no build step. Serve the directory over HTTP and open
 python3 -m http.server
 ```
 
-The site is also served via GitHub Pages from the default branch.
+The site is served via GitHub Pages from the `main` branch root at
+<https://goreda.github.io/rrll/> (Pages API status: built, verified 2026-10-24).
 
 ## Controls
 
